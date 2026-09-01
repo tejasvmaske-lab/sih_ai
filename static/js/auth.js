@@ -3,14 +3,28 @@
 let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Check saved session in localStorage
+    // ── Auth Guard ──────────────────────────────────────────
+    // If on the main app page and no session exists, redirect to login.
+    const publicPaths = ['/login', '/admin/login'];
+    const isPublicPage = publicPaths.some(p => window.location.pathname.startsWith(p));
+
     const savedUser = localStorage.getItem('sih_user');
+    if (!isPublicPage && !savedUser) {
+        // No session — send to citizen login
+        window.location.href = '/login';
+        return;
+    }
+
     if (savedUser) {
         try {
             currentUser = JSON.parse(savedUser);
             updateUserUI();
         } catch (e) {
             localStorage.removeItem('sih_user');
+            if (!isPublicPage) {
+                window.location.href = '/login';
+                return;
+            }
         }
     }
 
@@ -116,8 +130,7 @@ function demoQuickLogin(role) {
 function logout() {
     currentUser = null;
     localStorage.removeItem('sih_user');
-    updateUserUI();
-    openAuthModal('citizen');
+    window.location.href = '/login';
 }
 
 function updateUserUI() {
