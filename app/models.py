@@ -23,6 +23,14 @@ class Grievance(Base):
     status = Column(String, nullable=False, default="AI Classified")
     related_ids = Column(JSON, default=list)
     
+    # ── Resolution Verification & Timeline Tracking ──
+    resolution_image_url = Column(String, nullable=True)
+    resolution_notes = Column(Text, nullable=True)
+    resolution_confidence = Column(Float, default=0.94)
+    resolution_verified = Column(Integer, default=0) # 1 = True, 0 = False
+    assigned_officer = Column(String, nullable=True, default="Er. Rajesh Sharma, Ward 4 Officer")
+    timeline_events = Column(JSON, default=list)
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

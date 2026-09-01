@@ -69,6 +69,11 @@ const TRANSLATIONS = {
     ai_standby_title: "AI Pipeline Standing By",
     ai_standby_desc: "Submit a complaint on the left to see real-time AI classification, priority detection, department routing, duplicate detection, and summary.",
 
+    // Timeline Tracker
+    tracker_title: "Live Grievance Timeline Tracker",
+    tracker_desc: "Track on-ground redressal progress and visual proof of resolution in real time.",
+    tracker_btn: "Track Status",
+
     // Dashboard
     dash_title: "Municipal Authority Command Dashboard",
     dash_desc: "Monitor grievance statistics, AI routing, duplicate clusters, and smart Officer Assistant recommendations.",
@@ -169,6 +174,11 @@ const TRANSLATIONS = {
     ai_standby_title: "AI पाइपलाइन प्रतीक्षा में",
     ai_standby_desc: "AI वर्गीकरण, प्राथमिकता पहचान और विभाग रूटिंग देखने के लिए बाईं ओर शिकायत दर्ज करें।",
 
+    // Timeline Tracker
+    tracker_title: "लाइव शिकायत टाइमलाइन ट्रैकर",
+    tracker_desc: "जमीनी स्तर पर निवारण प्रगति और फोटो प्रमाण रीयल-टाइम में देखें।",
+    tracker_btn: "स्थिति ट्रैक करें",
+
     // Dashboard
     dash_title: "नगर पालिका प्राधिकरण डैशबोर्ड",
     dash_desc: "शिकायत आँकड़े, AI रूटिंग और डुप्लीकेट क्लस्टर मॉनिटर करें।",
@@ -268,6 +278,11 @@ const TRANSLATIONS = {
     ai_status: "स्थिती",
     ai_standby_title: "AI पाइपलाइन प्रतीक्षेत",
     ai_standby_desc: "AI वर्गीकरण, प्राधान्य शोध आणि विभाग रूटिंग पाहण्यासाठी डाव्या बाजूस तक्रार दाखल करा.",
+
+    // Timeline Tracker
+    tracker_title: "थेट तक्रार टाइमलाइन ट्रॅकर",
+    tracker_desc: "ग्राउंडवरील निवारण प्रगती आणि फोटो पुरावा रिअल-टाइममध्ये पहा.",
+    tracker_btn: "स्थिती ट्रॅक करा",
 
     // Dashboard
     dash_title: "महानगरपालिका प्राधिकरण डॅशबोर्ड",

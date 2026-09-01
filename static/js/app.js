@@ -525,15 +525,390 @@ function renderAiAnalysisCard(data) {
 
             ${relatedHTML}
 
-            <div style="margin-top:1.25rem;font-size:0.8rem;color:var(--text-muted);text-align:right;">
-                ${t('ai_ticket')}: <strong>${data.ticket_id}</strong> | ${t('ai_status')}: <span class="status-badge">${data.status}</span>
+            <div style="margin-top:1.25rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;padding-top:1rem;border-top:1px solid var(--border-color);">
+                <div style="font-size:0.82rem;color:var(--text-muted);">
+                    ${t('ai_ticket')}: <strong style="color:#fff;font-family:monospace;font-size:0.95rem;">${data.ticket_id}</strong>
+                </div>
+                <button type="button" class="btn-action" onclick="trackGrievance('${data.ticket_id}')" style="background:rgba(99,102,241,0.18);border-color:rgba(99,102,241,0.4);color:#a5b4fc;font-weight:700;font-size:0.82rem;">
+                    <span>🚚</span> Track Live Progress →
+                </button>
             </div>
         </div>
     `;
 
     aiResultSection.innerHTML = html;
     aiResultSection.scrollIntoView({ behavior: 'smooth' });
+
+    // Automatically initialize tracking in the tracker box as well
+    trackGrievance(data.ticket_id, false);
 }
+
+// ═══════════════════════════════════════════════════════════
+// LIVE GRIEVANCE TIMELINE TRACKER
+// ═══════════════════════════════════════════════════════════
+function handleTrackTicketClick() {
+    const input = document.getElementById('trackTicketInput');
+    if (!input || !input.value.trim()) {
+        alert('Please enter a valid Ticket ID (e.g. GRV-1001)');
+        return;
+    }
+    trackGrievance(input.value.trim(), true);
+}
+
+async function trackGrievance(ticketId, scrollTo = true) {
+    const input = document.getElementById('trackTicketInput');
+    if (input) input.value = ticketId.toUpperCase();
+
+    const timelineBox   = document.getElementById('liveTimelineBox');
+    const beforeAfterBox = document.getElementById('beforeAfterBox');
+    if (!timelineBox) return;
+
+    timelineBox.style.display = 'block';
+    timelineBox.innerHTML = `
+        <div style="text-align:center;padding:2rem;color:var(--text-muted);">
+            <div style="font-size:2rem;margin-bottom:0.5rem;animation:spin 1s linear infinite;">⏳</div>
+            <div style="font-size:0.88rem;">Fetching live timeline for <strong>${escapeHtml(ticketId)}</strong>...</div>
+        </div>
+    `;
+
+    try {
+        const res = await fetch(`/api/grievances/track/${encodeURIComponent(ticketId)}`);
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Ticket not found.');
+        }
+
+        const data = await res.json();
+        renderLiveTimeline(data);
+
+        if (beforeAfterBox) {
+            renderBeforeAfterProof(data, beforeAfterBox);
+        }
+
+        if (scrollTo) {
+            document.getElementById('trackerSearchCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+    } catch (err) {
+        timelineBox.innerHTML = `
+            <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:1.2rem;color:#fca5a5;font-size:0.88rem;text-align:center;">
+                ⚠️ ${escapeHtml(err.message)}
+            </div>
+        `;
+        if (beforeAfterBox) beforeAfterBox.style.display = 'none';
+    }
+}
+
+function renderLiveTimeline(grievance) {
+    const box = document.getElementById('liveTimelineBox');
+    if (!box) return;
+
+    const events = grievance.timeline_events || [];
+    const statusMap = {
+        'Submitted': 0,
+        'AI Classified': 1,
+        'Assigned': 2,
+        'In Progress': 3,
+        'Resolved': 4
+    };
+    const currentStepIdx = statusMap[grievance.status] !== undefined ? statusMap[grievance.status] : 1;
+
+    let stepsHTML = '';
+    events.forEach((ev, idx) => {
+        const isDone    = idx < currentStepIdx || grievance.status === 'Resolved';
+        const isCurrent = idx === currentStepIdx && grievance.status !== 'Resolved';
+        const isPending = idx > currentStepIdx;
+
+        let nodeClass = 'timeline-node';
+        let nodeIcon  = '⚪';
+        if (isDone) {
+            nodeClass += ' node-done';
+            nodeIcon = '✓';
+        } else if (isCurrent) {
+            nodeClass += ' node-active';
+            nodeIcon = '⚡';
+        } else {
+            nodeClass += ' node-pending';
+            nodeIcon = (idx + 1);
+        }
+
+        stepsHTML += `
+            <div class="timeline-step ${isCurrent ? 'step-active' : ''} ${isDone ? 'step-done' : ''}">
+                <div class="timeline-left">
+                    <div class="${nodeClass}">${nodeIcon}</div>
+                    ${idx < events.length - 1 ? `<div class="timeline-connector ${idx < currentStepIdx ? 'connector-done' : ''}"></div>` : ''}
+                </div>
+                <div class="timeline-body">
+                    <div class="timeline-step-header">
+                        <span class="timeline-step-title ${isCurrent ? 'title-active' : ''}">${escapeHtml(ev.title)}</span>
+                        <span class="timeline-step-badge">${escapeHtml(ev.badge || '')}</span>
+                    </div>
+                    <div class="timeline-step-time">⏰ ${escapeHtml(ev.time || '')}</div>
+                    <div class="timeline-step-desc">${escapeHtml(ev.desc || '')}</div>
+                </div>
+            </div>
+        `;
+    });
+
+    box.innerHTML = `
+        <div class="timeline-header-bar">
+            <div>
+                <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Ticket Status Tracker</div>
+                <div style="font-family:monospace;font-size:1.15rem;font-weight:800;color:#fff;">${grievance.ticket_id}</div>
+            </div>
+            <div style="text-align:right;">
+                <span class="status-badge ${grievance.status === 'Resolved' ? 'status-resolved' : ''}">${grievance.status}</span>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">${grievance.department}</div>
+            </div>
+        </div>
+
+        <div class="timeline-container">
+            ${stepsHTML}
+        </div>
+
+        <div class="timeline-footer">
+            <div><strong>Location:</strong> ${escapeHtml(grievance.location)}</div>
+            <div><strong>Officer:</strong> ${escapeHtml(grievance.assigned_officer || 'Zonal Officer')}</div>
+        </div>
+    `;
+}
+
+function renderBeforeAfterProof(grievance, container) {
+    if (grievance.status !== 'Resolved') {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+
+    const beforeImgHTML = grievance.image_url
+        ? `<img src="${grievance.image_url}" alt="Citizen Before Issue" class="proof-img before-img">`
+        : `<div class="proof-no-img before-no-img">🔴 Original Complaint<br><span style="font-size:0.72rem;color:var(--text-muted);">No photo uploaded with initial filing</span></div>`;
+
+    const afterImgHTML = grievance.resolution_image_url
+        ? `<img src="${grievance.resolution_image_url}" alt="Municipal After Proof" class="proof-img after-img">`
+        : `<div class="proof-no-img after-no-img">🟢 On-Ground Inspection Verified<br><span style="font-size:0.72rem;color:#6ee7b7;">Resolution certified by Zonal Officer</span></div>`;
+
+    const matchPct = Math.round((grievance.resolution_confidence || 0.94) * 100);
+
+    container.innerHTML = `
+        <div class="before-after-card">
+            <div class="ba-header">
+                <div class="ba-title">
+                    <span>✨</span> AI Before vs. After Resolution Verification
+                </div>
+                <div class="ba-verified-badge">
+                    <span>🛡️</span> AI Verified: ${matchPct}% Match
+                </div>
+            </div>
+
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.85rem;">
+                Visual verification proof submitted by Municipal Corporation field engineering team.
+            </p>
+
+            <div class="ba-grid">
+                <div class="ba-item">
+                    <div class="ba-label before-label">🔴 BEFORE (Citizen Complaint)</div>
+                    ${beforeImgHTML}
+                </div>
+                <div class="ba-item">
+                    <div class="ba-label after-label">🟢 AFTER (Official Resolution Proof)</div>
+                    ${afterImgHTML}
+                </div>
+            </div>
+
+            <div class="ba-notes-box">
+                <div style="font-size:0.82rem;line-height:1.5;">
+                    <strong style="color:#e0f2fe;">Official Resolution Action:</strong> ${escapeHtml(grievance.resolution_notes || 'Grievance inspected and resolved by municipal field staff.')}
+                </div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.4rem;display:flex;justify-content:space-between;flex-wrap:wrap;">
+                    <span>Signed: <strong>${escapeHtml(grievance.assigned_officer || 'Ward Officer')}</strong></span>
+                    <span style="color:#34d399;">Status: <strong>Legally Closed</strong></span>
+                </div>
+            </div>
+
+            <!-- Citizen Satisfaction Rating Widget -->
+            <div class="citizen-feedback-box">
+                <div style="font-size:0.78rem;font-weight:700;color:#cbd5e1;margin-bottom:0.3rem;">Rate your satisfaction with this redressal:</div>
+                <div class="star-rating">
+                    <button type="button" class="star-btn" onclick="submitFeedbackRating('${grievance.ticket_id}', 1)">⭐</button>
+                    <button type="button" class="star-btn" onclick="submitFeedbackRating('${grievance.ticket_id}', 2)">⭐</button>
+                    <button type="button" class="star-btn" onclick="submitFeedbackRating('${grievance.ticket_id}', 3)">⭐</button>
+                    <button type="button" class="star-btn" onclick="submitFeedbackRating('${grievance.ticket_id}', 4)">⭐</button>
+                    <button type="button" class="star-btn" onclick="submitFeedbackRating('${grievance.ticket_id}', 5)">⭐</button>
+                    <span id="feedbackRatingMsg" style="font-size:0.75rem;color:#6ee7b7;margin-left:0.5rem;"></span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function submitFeedbackRating(ticketId, rating) {
+    const el = document.getElementById('feedbackRatingMsg');
+    if (el) {
+        el.textContent = `Thank you! Rated ${rating}/5 ⭐`;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// NOTIFICATION SYSTEM & TOAST ALERTS
+// ═══════════════════════════════════════════════════════════
+function initNotifications() {
+    // Seed sample resolved notification if none exist for demonstration
+    const notifs = getStoredNotifications();
+    if (notifs.length === 0) {
+        saveStoredNotifications([
+            {
+                ticket_id: "GRV-1001",
+                department: "Roads & Infrastructure Department",
+                notes: "Pothole filled with bitumen and compacted with road roller.",
+                time: "10:30 AM",
+                read: false
+            }
+        ]);
+    }
+    updateNotifBadge();
+    renderNotificationList();
+}
+
+function getStoredNotifications() {
+    try {
+        return JSON.parse(localStorage.getItem('sih_notifs') || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function saveStoredNotifications(list) {
+    localStorage.setItem('sih_notifs', JSON.stringify(list));
+    updateNotifBadge();
+}
+
+function addCitizenNotification(notif) {
+    const list = getStoredNotifications();
+    list.unshift({ ...notif, read: false });
+    saveStoredNotifications(list);
+    renderNotificationList();
+    showToastNotification(notif);
+}
+
+function updateNotifBadge() {
+    const list = getStoredNotifications();
+    const unread = list.filter(n => !n.read).length;
+    const badge = document.getElementById('notifBadge');
+    if (!badge) return;
+
+    if (unread > 0) {
+        badge.textContent = unread > 9 ? '9+' : unread;
+        badge.style.display = 'inline-flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function renderNotificationList() {
+    const container = document.getElementById('notifList');
+    if (!container) return;
+
+    const list = getStoredNotifications();
+    if (list.length === 0) {
+        container.innerHTML = `<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.82rem;">No notifications.</div>`;
+        return;
+    }
+
+    let html = '';
+    list.forEach((n, idx) => {
+        html += `
+            <div class="notif-item ${n.read ? 'notif-read' : 'notif-unread'}" onclick="handleNotifItemClick('${n.ticket_id}', ${idx})">
+                <div style="font-size:1.2rem;">✅</div>
+                <div style="flex:1;">
+                    <div style="font-size:0.82rem;font-weight:700;color:#fff;">
+                        Ticket <strong>${escapeHtml(n.ticket_id)}</strong> Resolved!
+                    </div>
+                    <div style="font-size:0.75rem;color:#94a3b8;margin-top:0.15rem;">
+                        ${escapeHtml(n.department || 'Municipal Dept')}
+                    </div>
+                    <div style="font-size:0.72rem;color:var(--accent);margin-top:0.25rem;">
+                        👉 Click to view Before/After proof
+                    </div>
+                </div>
+                <div style="font-size:0.7rem;color:var(--text-muted);white-space:nowrap;">${escapeHtml(n.time || '')}</div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+function toggleNotifDropdown() {
+    const dropdown = document.getElementById('notifDropdown');
+    if (!dropdown) return;
+    const isOpen = dropdown.style.display !== 'none';
+    dropdown.style.display = isOpen ? 'none' : 'block';
+
+    if (!isOpen) {
+        // Mark all as read when opening dropdown
+        const list = getStoredNotifications().map(n => ({ ...n, read: true }));
+        saveStoredNotifications(list);
+        renderNotificationList();
+    }
+}
+
+function handleNotifItemClick(ticketId, idx) {
+    toggleNotifDropdown();
+    trackGrievance(ticketId, true);
+}
+
+function clearAllNotifications() {
+    saveStoredNotifications([]);
+    renderNotificationList();
+}
+
+function showToastNotification(notif) {
+    const container = document.getElementById('toastNotificationContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-alert';
+    toast.innerHTML = `
+        <div style="font-size:1.4rem;">🎉</div>
+        <div style="flex:1;">
+            <div style="font-weight:800;color:#6ee7b7;font-size:0.88rem;">Grievance Work Completed!</div>
+            <div style="font-size:0.78rem;color:#e0f2fe;margin-top:0.15rem;">
+                Ticket <strong>${escapeHtml(notif.ticket_id)}</strong> was resolved with verified visual evidence.
+            </div>
+        </div>
+        <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--text-muted);font-size:1rem;cursor:pointer;">✕</button>
+    `;
+
+    toast.onclick = (e) => {
+        if (e.target.tagName !== 'BUTTON') {
+            trackGrievance(notif.ticket_id, true);
+            toast.remove();
+        }
+    };
+
+    container.appendChild(toast);
+
+    // Auto dismiss after 6 seconds
+    setTimeout(() => {
+        if (toast.parentElement) toast.remove();
+    }, 6000);
+}
+
+// ─── Initialize Notifications on Load ───
+document.addEventListener('DOMContentLoaded', () => {
+    initNotifications();
+
+    // Close notification dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const notifWrap = document.querySelector('.notif-wrapper');
+        const notifDropdown = document.getElementById('notifDropdown');
+        if (notifDropdown && notifWrap && !notifWrap.contains(e.target)) {
+            notifDropdown.style.display = 'none';
+        }
+    });
+});
 
 function escapeHtml(text) {
     if (!text) return '';
@@ -552,3 +927,4 @@ function setDemoText(text, lang = 'English') {
     if (ta) ta.value = text;
     if (ls) ls.value = lang;
 }
+

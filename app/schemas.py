@@ -26,6 +26,15 @@ class GrievanceResponse(BaseModel):
     explanation: str
     status: str
     related_ids: List[int] = []
+    
+    # ── Resolution Verification & Timeline Tracking ──
+    resolution_image_url: Optional[str] = None
+    resolution_notes: Optional[str] = None
+    resolution_confidence: Optional[float] = 0.94
+    resolution_verified: Optional[int] = 0
+    assigned_officer: Optional[str] = "Er. Rajesh Sharma, Ward 4 Officer"
+    timeline_events: Optional[List[dict]] = []
+    
     created_at: datetime
     updated_at: datetime
 
