@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIH26-S02 | AI Citizen Grievance Platform</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="header-bar">
+        <div class="brand-container">
+            <div class="brand-logo">🏛️</div>
+            <div>
+                <div class="brand-title">SIH26-S02 Citizen Grievance Portal</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">AI Classification, Duplicate Detection & Smart Routing</div>
+            </div>
+            <span class="brand-tag">SIH Prototype</span>
+        </div>
+
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-target="citizenView">
+                <span>📝</span> Citizen Portal
+            </button>
+            <button class="tab-btn" data-target="dashboardView">
+                <span>📊</span> Municipal Authority Dashboard
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Content Wrapper -->
+    <main class="main-wrapper">
+
+        <!-- ================= 1. CITIZEN PORTAL SECTION ================= -->
+        <section id="citizenView" class="view-section active">
+            
+            <div class="portal-grid">
+                
+                <!-- Complaint Form -->
+                <div class="glass-card">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>✍️</span> Submit Citizen Grievance
+                        </h2>
+                        <p class="section-desc">Report civic issues in English, Hindi, or Marathi with location & photo evidence.</p>
+                    </div>
+
+                    <form id="complaintForm">
+                        <div class="form-group">
+                            <label class="form-label">Language</label>
+                            <select name="language" id="languageSelect" class="form-select">
+                                <option value="English" selected>English</option>
+                                <option value="Hindi">Hindi (हिंदी)</option>
+                                <option value="Marathi">Marathi (मराठी)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Complaint Description</label>
+                            <textarea name="text" id="complaintText" class="form-control" placeholder="Describe the issue in detail (e.g. Dangerous pothole near ABC College)..." required></textarea>
+                        </div>
+
+                        <div class="form-group flex-gap">
+                            <div style="flex: 1;">
+                                <label class="form-label">Location / Area</label>
+                                <select name="location" class="form-select">
+                                    <option value="ABC Road, near ABC College">ABC Road, near ABC College</option>
+                                    <option value="Station Square, Main Market">Station Square, Main Market</option>
+                                    <option value="MG Road, Sector 4">MG Road, Sector 4</option>
+                                    <option value="Gandhi Chowk, Civil Lines">Gandhi Chowk, Civil Lines</option>
+                                    <option value="Subhash Nagar Lane 3">Subhash Nagar Lane 3</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="form-label">Optional Photo Evidence</label>
+                                <input type="file" name="image" id="imageInput" accept="image/*" class="form-control">
+                            </div>
+                        </div>
+
+                        <!-- Sample Quick Triggers -->
+                        <div style="margin-bottom: 1.25rem;">
+                            <label class="form-label" style="font-size: 0.78rem;">Demo Test Inputs (Click to paste):</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                <button type="button" class="btn-action" onclick="setDemoText('There is a large pothole near ABC College causing danger to students.')">Pothole 1 (EN)</button>
+                                <button type="button" class="btn-action" onclick="setDemoText('A huge pothole has appeared outside ABC College and is dangerous.')">Pothole 2 Near-Duplicate (EN)</button>
+                                <button type="button" class="btn-action" onclick="setDemoText('हमारे इलाके में पांच दिनों से कचरा नहीं उठाया गया।', 'Hindi')">Garbage (HI)</button>
+                                <button type="button" class="btn-action" onclick="setDemoText('आमच्या रस्त्यावर मोठा खड्डा पडला आहे.', 'Marathi')">Road Pothole (MR)</button>
+                            </div>
+                        </div>
+
+                        <div class="flex-gap">
+                            <button type="submit" id="submitBtn" class="btn-primary">
+                                <span>🚀</span> Submit Complaint & Process AI
+                            </button>
+                            <button type="button" id="voiceBtn" class="btn-voice" title="Speech to text input">
+                                <span>🎙️</span> Voice Input
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- AI Analysis Card Column -->
+                <div>
+                    <div id="aiResultSection">
+                        <div class="glass-card" style="text-align: center; padding: 3.5rem 2rem; color: var(--text-muted);">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">🤖</div>
+                            <h3 style="font-family: var(--font-heading); color: #fff; font-size: 1.2rem;">AI Pipeline Standing By</h3>
+                            <p style="font-size: 0.9rem; margin-top: 0.5rem; max-width: 320px; margin-left: auto; margin-right: auto;">
+                                Submit a complaint on the left to see real-time AI classification, priority detection, department routing, duplicate detection, and summary.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= 2. AUTHORITY DASHBOARD SECTION ================= -->
+        <section id="dashboardView" class="view-section">
+            
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span>🏢</span> Municipal Authority Command Dashboard
+                </h2>
+                <p class="section-desc">Monitor grievance statistics, AI routing, duplicate clusters, and smart Officer Assistant recommendations.</p>
+            </div>
+
+            <!-- Stats Metric Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-title">Total Complaints</div>
+                    <div id="statTotal" class="stat-card-value">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">Pending Action</div>
+                    <div id="statPending" class="stat-card-value" style="color: #60a5fa;">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">High Priority</div>
+                    <div id="statHighPriority" class="stat-card-value" style="color: #fbbf24;">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">Resolved</div>
+                    <div id="statResolved" class="stat-card-value" style="color: #34d399;">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">Related Clusters</div>
+                    <div id="statRelated" class="stat-card-value" style="color: #a78bfa;">0</div>
+                </div>
+            </div>
+
+            <!-- Filters Bar -->
+            <div class="filter-bar">
+                <div style="flex: 1; min-width: 160px;">
+                    <select id="filterCategory" class="form-select">
+                        <option value="">All Categories</option>
+                        <option value="Roads">Roads</option>
+                        <option value="Waste Management">Waste Management</option>
+                        <option value="Water Supply">Water Supply</option>
+                        <option value="Electricity">Electricity</option>
+                        <option value="Street Lighting">Street Lighting</option>
+                        <option value="Drainage">Drainage</option>
+                        <option value="Public Safety">Public Safety</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 140px;">
+                    <select id="filterPriority" class="form-select">
+                        <option value="">All Priorities</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="LOW">LOW</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 140px;">
+                    <select id="filterStatus" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="AI Classified">AI Classified</option>
+                        <option value="Assigned">Assigned</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                    </select>
+                </div>
+                <div style="flex: 2; min-width: 200px;">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by text, location, or ticket ID...">
+                </div>
+            </div>
+
+            <!-- Complaints Table -->
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>Ticket ID</th>
+                            <th>Summary</th>
+                            <th>Category</th>
+                            <th>Priority</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Related</th>
+                        </tr>
+                    </thead>
+                    <tbody id="grievanceTableBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 2rem;">Loading dashboard data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Hotspots Visualization -->
+            <div class="hotspot-grid">
+                <div>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.15rem; margin-bottom: 0.8rem; color: #fff;">
+                        📍 Live Hotspot Radar Visualization
+                    </h3>
+                    <div id="hotspotMap" class="map-container"></div>
+                </div>
+                <div>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.15rem; margin-bottom: 0.8rem; color: #fff;">
+                        🔥 Active Grievance Clusters
+                    </h3>
+                    <div id="hotspotList"></div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Complaint Detail & Officer Assistant Modal -->
+    <div id="detailModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title">Grievance Record Details</div>
+                <button class="btn-close" onclick="closeModal()">✕</button>
+            </div>
+            <div id="modalContentBody">
+                <!-- Modal content injected dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+    <script src="/static/js/map.js"></script>
+    <script>
+        function setDemoText(text, lang = 'English') {
+            document.getElementById('complaintText').value = text;
+            document.getElementById('languageSelect').value = lang;
+        }
+    </script>
+</body>
+</html>

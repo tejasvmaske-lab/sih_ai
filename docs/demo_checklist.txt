@@ -1,0 +1,29 @@
+SIH26-S02 DEMO CHECKLIST
+=======================
+
+URL: http://127.0.0.1:8000
+
+Pre-Demo Setup:
+[ ] Run `python scripts/seed_demo.py` to populate initial demo data.
+[ ] Start app: `uvicorn app.main:app --port 8000`.
+[ ] Open browser at http://127.0.0.1:8000.
+
+Demo Steps:
+1. Citizen Portal:
+   - Click "Pothole 1 (EN)" -> Submit -> Check AI Analysis Card (Roads, HIGH, Roads Dept).
+   - Click "Pothole 2 Near-Duplicate (EN)" -> Submit -> Verify Yellow Duplicate Warning (Linked to GRV-1001).
+   - Click "Garbage (HI)" -> Submit -> Verify Category: Waste Management.
+   - Click "Road Pothole (MR)" -> Submit -> Verify Category: Roads.
+
+2. Authority Dashboard:
+   - Switch to "Municipal Authority Dashboard" tab.
+   - View Stats (Total, Pending, High Priority, Resolved, Related Clusters).
+   - View Hotspot Radar map.
+   - Click row GRV-1001 -> Inspect Officer Assistant recommendations.
+   - Update status to "In Progress" or "Resolved".
+
+Final Talking Points:
+- 100% Reliable (works with or without OpenAI API key via fallback engine).
+- Multilingual support for English, Hindi, Marathi.
+- Jaccard & N-gram duplicate detection.
+- Deterministic Officer Assistant.
