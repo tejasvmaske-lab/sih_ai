@@ -11,7 +11,7 @@ from app.routers import grievances, dashboard, officer, voice, auth
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="SIH26-S02 AI Citizen Grievance Platform",
+    title="AI Citizen Grievance Platform",
     description="AI-Based Grievance Classification, Prioritization, Duplicate Detection & Smart Routing",
     version="1.0.0"
 )
@@ -74,7 +74,7 @@ def admin_login_page(request: Request):
 def health_check():
     return {
         "status": "healthy",
-        "system": "SIH26-S02 AI Citizen Grievance Platform",
+        "system": "AI Citizen Grievance Platform",
         "voice_configured": bool(OPENAI_API_KEY),
         "login_urls": {
             "citizen": "/login",
