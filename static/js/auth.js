@@ -122,14 +122,13 @@ function logout() {
 
 function updateUserUI() {
     const userBadge = document.getElementById('userNavBadge');
-    const authBtn = document.getElementById('navAuthBtn');
-    const adminTabBtn = document.getElementById('adminNavTab');
+    const authContainer = document.getElementById('navAuthBtn');
 
     if (currentUser) {
         if (userBadge) {
             userBadge.style.display = 'inline-flex';
             if (currentUser.role === 'admin') {
-                userBadge.innerHTML = `🛡️ Official Admin: <strong>${escapeHtml(currentUser.full_name || currentUser.username)}</strong> (${currentUser.department || 'MC'})`;
+                userBadge.innerHTML = `🛡️ Official: <strong>${escapeHtml(currentUser.full_name || currentUser.username)}</strong>`;
                 userBadge.style.borderColor = 'rgba(6, 182, 212, 0.5)';
                 userBadge.style.color = '#67e8f9';
             } else {
@@ -138,26 +137,30 @@ function updateUserUI() {
                 userBadge.style.color = '#a5b4fc';
             }
         }
-        if (authBtn) {
-            authBtn.innerHTML = `<span>🚪</span> Logout`;
-            authBtn.onclick = logout;
+        if (authContainer) {
+            authContainer.innerHTML = `<button class="btn-action" style="padding:0.6rem 1.1rem;font-weight:700;" onclick="logout()">🚪 Logout</button>`;
         }
     } else {
         if (userBadge) userBadge.style.display = 'none';
-        if (authBtn) {
-            authBtn.innerHTML = `<span>🔑</span> Login / Portal Select`;
-            authBtn.onclick = () => openAuthModal('citizen');
+        if (authContainer) {
+            authContainer.innerHTML = `
+                <a href="/login" class="btn-action" style="padding:0.6rem 1rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;">👤 Citizen Login</a>
+                <a href="/admin/login" class="btn-action" style="padding:0.6rem 1rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;background:rgba(6,182,212,0.12);border-color:rgba(6,182,212,0.35);color:#67e8f9;margin-left:0.4rem;">🛡️ Admin Login</a>
+            `;
         }
     }
 }
 
+
 function openAuthModal(defaultPortal = 'citizen') {
     const modal = document.getElementById('authModal');
     if (modal) {
+        modal.style.zIndex = '2000';
         modal.classList.add('active');
         switchAuthSubTab(defaultPortal);
     }
 }
+
 
 function closeAuthModal() {
     const modal = document.getElementById('authModal');
@@ -212,15 +215,6 @@ function clearAuthErrors() {
 }
 
 function switchTab(targetId) {
-    // Role check before switching to Admin Dashboard tab
-    if (targetId === 'dashboardView') {
-        if (!currentUser || currentUser.role !== 'admin') {
-            alert("🔒 Access Restricted: Municipal Authority Admin Dashboard is reserved for Municipal Officers. Please log in through the Official Municipal Admin Portal.");
-            openAuthModal('admin');
-            return;
-        }
-    }
-
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
@@ -231,7 +225,70 @@ function switchTab(targetId) {
     const targetSection = document.getElementById(targetId);
     if (targetSection) targetSection.classList.add('active');
 
-    if (targetId === 'dashboardView' && typeof loadDashboardData === 'function') {
-        loadDashboardData();
+    if (targetId === 'dashboardView') {
+        if (!currentUser || currentUser.role !== 'admin') {
+            // Show restricted access screen inside dashboard
+            renderDashboardAccessRestricted();
+        } else {
+            if (typeof loadDashboardData === 'function') loadDashboardData();
+        }
     }
 }
+
+function renderDashboardAccessRestricted() {
+    const dashSection = document.getElementById('dashboardView');
+    if (!dashSection) return;
+
+    dashSection.innerHTML = `
+        <div style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            text-align: center;
+            padding: 3rem;
+        ">
+            <div style="font-size: 4rem; margin-bottom: 1.5rem;">🏢</div>
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: 0.75rem;">
+                Municipal Authority Dashboard
+            </h2>
+            <p style="color: #94a3b8; font-size: 0.95rem; max-width: 480px; margin-bottom: 0.5rem; line-height: 1.7;">
+                This dashboard is exclusively managed by <strong style="color:#67e8f9;">Municipal Corporation Officials</strong>.
+                Please log in with your official government credentials to access grievance monitoring, hotspot radar, and the Officer Assistant.
+            </p>
+            <div style="
+                margin: 1.5rem 0;
+                padding: 0.85rem 1.25rem;
+                background: rgba(239,68,68,0.1);
+                border: 1px solid rgba(239,68,68,0.3);
+                border-radius: 12px;
+                font-size: 0.85rem;
+                color: #fca5a5;
+                max-width: 420px;
+            ">
+                ⛔ <strong>Citizens are not permitted</strong> to access the Municipal Authority Dashboard.
+            </div>
+            <a href="/admin/login" style="
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                background: linear-gradient(135deg, #06b6d4, #0284c7);
+                color: #fff;
+                text-decoration: none;
+                padding: 0.9rem 2rem;
+                border-radius: 12px;
+                font-weight: 700;
+                font-size: 1rem;
+                box-shadow: 0 4px 16px rgba(6,182,212,0.35);
+                transition: all 0.2s;
+            ">
+                🛡️ Go to Municipal Admin Login
+            </a>
+            <div style="margin-top: 1rem; font-size: 0.83rem; color: #64748b;">
+                Are you a citizen? <a href="/login" style="color: #a5b4fc; font-weight: 700;">Citizen Login →</a>
+            </div>
+        </div>
+    `;
+}
+

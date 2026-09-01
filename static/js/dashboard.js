@@ -1,26 +1,6 @@
-// Municipal Authority Dashboard JavaScript Logic
-
 let currentGrievances = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Tab Switching Logic
-    const tabs = document.querySelectorAll('.tab-btn');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
-
-            tab.classList.add('active');
-            const targetId = tab.getAttribute('data-target');
-            const targetSection = document.getElementById(targetId);
-            if (targetSection) targetSection.classList.add('active');
-
-            if (targetId === 'dashboardView') {
-                loadDashboardData();
-            }
-        });
-    });
-
     // Filters event listeners
     const filterCategory = document.getElementById('filterCategory');
     const filterPriority = document.getElementById('filterPriority');
@@ -39,9 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initial load
-    loadDashboardData();
+    // Initial load of dashboard if user is admin
+    if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin') {
+        loadDashboardData();
+    }
 });
+
 
 async function loadDashboardData() {
     await fetchStats();

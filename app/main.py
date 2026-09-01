@@ -45,20 +45,39 @@ app.include_router(voice.router)
 
 @app.get("/")
 def read_root(request: Request):
-    """
-    Renders main portal template with status flags.
-    """
+    """Renders main portal template."""
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={"voice_enabled": bool(OPENAI_API_KEY)}
     )
 
+@app.get("/login")
+def citizen_login_page(request: Request):
+    """Dedicated Citizen Login & Registration page."""
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={}
+    )
+
+@app.get("/admin/login")
+def admin_login_page(request: Request):
+    """Dedicated Municipal Corporation Admin Login page — strictly isolated from citizens."""
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_login.html",
+        context={}
+    )
 
 @app.get("/health")
 def health_check():
     return {
         "status": "healthy",
         "system": "SIH26-S02 AI Citizen Grievance Platform",
-        "voice_configured": bool(OPENAI_API_KEY)
+        "voice_configured": bool(OPENAI_API_KEY),
+        "login_urls": {
+            "citizen": "/login",
+            "admin": "/admin/login"
+        }
     }

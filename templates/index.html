@@ -33,9 +33,10 @@
                 </button>
             </nav>
 
-            <button id="navAuthBtn" class="btn-action" style="padding: 0.6rem 1.1rem; font-weight: 700;">
-                <span>🔑</span> Login / Portal Select
-            </button>
+            <div id="navAuthBtn">
+                <!-- Injected by auth.js based on login state -->
+            </div>
+
         </div>
     </header>
 
@@ -381,6 +382,14 @@
             document.getElementById('complaintText').value = text;
             document.getElementById('languageSelect').value = lang;
         }
+
+        // Auto-switch to dashboard if redirected from admin login (?view=dashboard)
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('view') === 'dashboard') {
+                switchTab('dashboardView');
+            }
+        });
     </script>
 </body>
 </html>
