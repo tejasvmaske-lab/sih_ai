@@ -1,4 +1,12 @@
-// Lightweight Hotspot Visualizer Logic
+// ============================================================
+// map.js — Real GIS Hotspot Map Visualizer (Leaflet.js)
+// Replaces abstract radar grid with an interactive real city map
+// ============================================================
+
+let hotspotLeafletMap = null;
+let hotspotMarkersLayer = null;
+let hotspotCirclesLayer = null;
+let hotspotDataMap = {};
 
 async function fetchAndRenderHotspots() {
     const mapElement = document.getElementById('hotspotMap');
@@ -22,10 +30,12 @@ async function fetchAndRenderHotspots() {
                 .join(', ');
 
             listHTML += `
-                <div class="hotspot-list-item">
+                <div class="hotspot-list-item" onclick="focusHotspotOnMap(${h.latitude}, ${h.longitude}, '${escapeHtml(h.name)}')" style="cursor: pointer; transition: all 0.2s;" title="Click to zoom on real map">
                     <div>
-                        <div style="font-weight: 700; color: #fff;">${escapeHtml(h.name)}</div>
-                        <div style="font-size: 0.8rem; color: var(--text-muted);">${categoriesText}</div>
+                        <div style="font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>📍</span> ${escapeHtml(h.name)}
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">${categoriesText}</div>
                     </div>
                     <div style="text-align: right;">
                         <span class="priority-badge priority-${h.highest_priority}">${h.highest_priority}</span>
@@ -38,75 +48,135 @@ async function fetchAndRenderHotspots() {
         });
         listElement.innerHTML = listHTML;
 
-        // Visual Map Representation (Canvas / Lightweight SVG radar visualization)
-        renderVisualMap(mapElement, hotspots);
+        // Render Real Interactive GIS Map
+        renderRealGISMap(mapElement, hotspots);
 
     } catch (e) {
         console.error("Error fetching hotspots:", e);
     }
 }
 
-function renderVisualMap(container, hotspots) {
-    const width = container.clientWidth || 500;
-    const height = container.clientHeight || 350;
+function renderRealGISMap(container, hotspots) {
+    if (typeof L === 'undefined') {
+        container.innerHTML = '<div style="color:#fca5a5;padding:2rem;text-align:center;">Leaflet.js map library not loaded.</div>';
+        return;
+    }
 
-    let svgHTML = `
-        <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <radialGradient id="gridGlow" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="#6366f1" stop-opacity="0.15"/>
-                    <stop offset="100%" stop-color="#0b0f19" stop-opacity="0"/>
-                </radialGradient>
-                <filter id="glow">
-                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                    <feMerge>
-                        <feMergeNode in="coloredBlur"/>
-                        <feMergeNode in="SourceGraphic"/>
-                    </feMerge>
-                </filter>
-            </defs>
+    if (!hotspotLeafletMap) {
+        container.innerHTML = '';
+        hotspotLeafletMap = L.map(container, {
+            zoomControl: true,
+            scrollWheelZoom: true
+        }).setView([19.0760, 72.8777], 13);
 
-            <!-- Background Grid -->
-            <rect width="100%" height="100%" fill="#0b0f19" />
-            <rect width="100%" height="100%" fill="url(#gridGlow)" />
-            
-            <g stroke="rgba(255, 255, 255, 0.05)" stroke-width="1">
-                ${Array.from({length: 10}).map((_, i) => `<line x1="0" y1="${i * 40}" x2="${width}" y2="${i * 40}" />`).join('')}
-                ${Array.from({length: 15}).map((_, i) => `<line x1="${i * 50}" y1="0" x2="${i * 50}" y2="${height}" />`).join('')}
-            </g>
-    `;
+        // Modern CartoDB Voyager / OpenStreetMap Map Tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(hotspotLeafletMap);
 
-    // Plot hotspot nodes across SVG grid
-    const positions = [
-        { x: width * 0.25, y: height * 0.35 },
-        { x: width * 0.65, y: height * 0.25 },
-        { x: width * 0.45, y: height * 0.70 },
-        { x: width * 0.80, y: height * 0.60 },
-        { x: width * 0.15, y: height * 0.75 }
-    ];
+        hotspotMarkersLayer = L.layerGroup().addTo(hotspotLeafletMap);
+        hotspotCirclesLayer = L.layerGroup().addTo(hotspotLeafletMap);
+    } else {
+        hotspotMarkersLayer.clearLayers();
+        hotspotCirclesLayer.clearLayers();
+    }
 
-    hotspots.forEach((h, idx) => {
-        const pos = positions[idx % positions.length];
-        const radius = Math.min(25 + (h.complaint_count * 3), 55);
-        let color = '#34d399';
-        if (h.highest_priority === 'CRITICAL') color = '#ef4444';
-        else if (h.highest_priority === 'HIGH') color = '#f59e0b';
-        else if (h.highest_priority === 'MEDIUM') color = '#3b82f6';
+    const bounds = [];
+    hotspotDataMap = {};
 
-        svgHTML += `
-            <g filter="url(#glow)">
-                <circle cx="${pos.x}" cy="${pos.y}" r="${radius}" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="2">
-                    <animate attributeName="r" values="${radius};${radius + 8};${radius}" dur="3s" repeatCount="indefinite" />
-                    <animate attributeName="fill-opacity" values="0.25;0.1;0.25" dur="3s" repeatCount="indefinite" />
-                </circle>
-                <circle cx="${pos.x}" cy="${pos.y}" r="6" fill="${color}" />
-                <text x="${pos.x}" y="${pos.y - radius - 8}" fill="#ffffff" font-size="12" font-weight="bold" text-anchor="middle" font-family="Outfit, sans-serif">
-                    ${escapeHtml(h.name)} (${h.complaint_count})
-                </text>
-            </g>
+    hotspots.forEach(h => {
+        const lat = parseFloat(h.latitude) || 19.0760;
+        const lng = parseFloat(h.longitude) || 72.8777;
+        bounds.push([lat, lng]);
+
+        let color = '#10b981';
+        let badgeBg = '#059669';
+        if (h.highest_priority === 'CRITICAL') {
+            color = '#ef4444';
+            badgeBg = '#dc2626';
+        } else if (h.highest_priority === 'HIGH') {
+            color = '#f59e0b';
+            badgeBg = '#d97706';
+        } else if (h.highest_priority === 'MEDIUM') {
+            color = '#3b82f6';
+            badgeBg = '#2563eb';
+        }
+
+        // 1. Pulsing Heatmap Circle Area
+        const radius = Math.min(150 + (h.complaint_count * 60), 700);
+        L.circle([lat, lng], {
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.22,
+            weight: 2,
+            radius: radius
+        }).addTo(hotspotCirclesLayer);
+
+        // 2. Custom Glowing Map Marker Pin with Count Badge
+        const customIcon = L.divIcon({
+            className: 'custom-gis-marker',
+            html: `
+                <div class="gis-marker-pin" style="border-color:${color};box-shadow:0 0 14px ${color};">
+                    <span class="gis-marker-count" style="background:${badgeBg};">${h.complaint_count}</span>
+                </div>
+            `,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            popupAnchor: [0, -18]
+        });
+
+        // 3. Category Breakdown HTML for Popup
+        const catPills = Object.entries(h.categories || {})
+            .map(([cat, cnt]) => `<span style="background:rgba(15,23,42,0.08);border:1px solid rgba(15,23,42,0.15);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;margin-right:0.3rem;display:inline-block;margin-bottom:0.25rem;"><strong>${cnt}</strong> ${escapeHtml(cat)}</span>`)
+            .join(' ');
+
+        const popupContent = `
+            <div style="min-width:230px;padding:0.3rem;font-family:'Plus Jakarta Sans',sans-serif;">
+                <div style="font-size:0.95rem;font-weight:800;color:#0f172a;margin-bottom:0.3rem;">📍 ${escapeHtml(h.name)}</div>
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                    <span style="background:${color};color:#fff;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.72rem;font-weight:800;">${h.highest_priority}</span>
+                    <span style="font-size:0.8rem;font-weight:800;color:#0f172a;">${h.complaint_count} Active Complaints</span>
+                </div>
+                <div style="margin-bottom:0.6rem;">${catPills}</div>
+                <button onclick="filterDashboardByLocation('${escapeHtml(h.name)}')" style="width:100%;padding:0.45rem;background:#0f172a;color:#67e8f9;border:none;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;">
+                    🔍 Filter Grievances in Table
+                </button>
+            </div>
         `;
+
+        const marker = L.marker([lat, lng], { icon: customIcon })
+            .addTo(hotspotMarkersLayer)
+            .bindPopup(popupContent);
+
+        hotspotDataMap[h.name] = { marker, lat, lng };
     });
 
-    svgHTML += `</svg>`;
-    container.innerHTML = svgHTML;
+    if (bounds.length > 0) {
+        hotspotLeafletMap.fitBounds(bounds, { padding: [45, 45], maxZoom: 15 });
+    }
+
+    setTimeout(() => {
+        if (hotspotLeafletMap) hotspotLeafletMap.invalidateSize();
+    }, 250);
+}
+
+function focusHotspotOnMap(lat, lng, name) {
+    if (!hotspotLeafletMap) return;
+    hotspotLeafletMap.setView([lat, lng], 15, { animate: true });
+    if (hotspotDataMap[name] && hotspotDataMap[name].marker) {
+        hotspotDataMap[name].marker.openPopup();
+    }
+}
+
+function filterDashboardByLocation(locationName) {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = locationName;
+        if (typeof fetchAndRenderGrievances === 'function') {
+            fetchAndRenderGrievances();
+        }
+        document.getElementById('grievanceTableBody')?.scrollIntoView({ behavior: 'smooth' });
+    }
 }

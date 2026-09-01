@@ -275,6 +275,11 @@ function switchTab(targetId) {
             renderDashboardAccessRestricted();
         } else {
             if (typeof loadDashboardData === 'function') loadDashboardData();
+            setTimeout(() => {
+                if (typeof hotspotLeafletMap !== 'undefined' && hotspotLeafletMap) {
+                    hotspotLeafletMap.invalidateSize();
+                }
+            }, 300);
         }
     }
 }
