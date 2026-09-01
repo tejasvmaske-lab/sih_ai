@@ -4,120 +4,192 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIH26-S02 | AI Citizen Grievance Platform</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <meta name="description" content="AI-Based Citizen Grievance Classification, Prioritization, Duplicate Detection and Smart Routing">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
-    <!-- Header Navigation -->
+    <!-- ═══════ HEADER ═══════ -->
     <header class="header-bar">
         <div class="brand-container">
             <div class="brand-logo">🏛️</div>
             <div>
                 <div class="brand-title">SIH26-S02 Citizen Grievance Portal</div>
-                <div style="font-size: 0.78rem; color: var(--text-muted);">AI Classification, Duplicate Detection & Smart Routing</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);">AI Classification, Duplicate Detection &amp; Smart Routing</div>
             </div>
             <span class="brand-tag">SIH PROTOTYPE</span>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 1rem;">
-            <!-- User Status Badge -->
-            <div id="userNavBadge" class="user-nav-badge" style="display: none;"></div>
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <!-- User Badge -->
+            <div id="userNavBadge" class="user-nav-badge" style="display:none;"></div>
 
+            <!-- Nav Tabs -->
             <nav class="nav-tabs">
                 <button class="tab-btn active" data-target="citizenView" onclick="switchTab('citizenView')">
-                    <span>📝</span> Citizen Portal
+                    <span>📝</span> <span data-i18n="nav_citizen_portal">Citizen Portal</span>
                 </button>
                 <button id="adminNavTab" class="tab-btn" data-target="dashboardView" onclick="switchTab('dashboardView')">
-                    <span>📊</span> Municipal Authority Dashboard
+                    <span>📊</span> <span data-i18n="nav_dashboard">Municipal Authority Dashboard</span>
                 </button>
             </nav>
 
-            <div id="navAuthBtn">
-                <!-- Injected by auth.js based on login state -->
+            <!-- Language Selector -->
+            <div class="lang-selector-wrap">
+                <span style="font-size:0.8rem;color:var(--text-muted);">🌐</span>
+                <select id="uiLangSelector" class="lang-selector" onchange="setLanguage(this.value)" title="Select UI Language">
+                    <option value="en">English</option>
+                    <option value="hi">हिंदी</option>
+                    <option value="mr">मराठी</option>
+                </select>
             </div>
 
+            <!-- Auth Buttons (injected by auth.js) -->
+            <div id="navAuthBtn"></div>
         </div>
     </header>
 
-    <!-- Main Content Wrapper -->
+    <!-- ═══════ MAIN ═══════ -->
     <main class="main-wrapper">
 
-        <!-- ================= 1. CITIZEN PORTAL SECTION ================= -->
+        <!-- ══════════ 1. CITIZEN PORTAL ══════════ -->
         <section id="citizenView" class="view-section active">
-            
             <div class="portal-grid">
-                
-                <!-- Complaint Form -->
+
+                <!-- Complaint Form Card -->
                 <div class="glass-card">
                     <div class="section-header">
                         <h2 class="section-title">
-                            <span>✍️</span> Submit Citizen Grievance
+                            <span>✍️</span> <span data-i18n="form_title">Submit Citizen Grievance</span>
                         </h2>
-                        <p class="section-desc">Report civic issues in English, Hindi, or Marathi with location & photo evidence.</p>
+                        <p class="section-desc" data-i18n="form_desc">Report civic issues in English, Hindi, or Marathi with location &amp; photo evidence.</p>
                     </div>
 
                     <form id="complaintForm">
+
+                        <!-- Complaint Language -->
                         <div class="form-group">
-                            <label class="form-label">Language</label>
+                            <label class="form-label" data-i18n="form_lang_label">Complaint Language</label>
                             <select name="language" id="languageSelect" class="form-select">
-                                <option value="English" selected>English</option>
+                                <option value="English">English</option>
                                 <option value="Hindi">Hindi (हिंदी)</option>
                                 <option value="Marathi">Marathi (मराठी)</option>
                             </select>
                         </div>
 
+                        <!-- Complaint Text -->
                         <div class="form-group">
-                            <label class="form-label">Complaint Description</label>
-                            <textarea name="text" id="complaintText" class="form-control" placeholder="Describe the issue in detail (e.g. Dangerous pothole near ABC College)..." required></textarea>
+                            <label class="form-label" data-i18n="form_complaint_label">Complaint Description</label>
+                            <textarea name="text" id="complaintText" class="form-control"
+                                data-i18n-placeholder="form_complaint_placeholder"
+                                placeholder="Describe the issue in detail..."
+                                rows="4" required></textarea>
                         </div>
 
-                        <div class="form-group flex-gap">
-                            <div style="flex: 1;">
-                                <label class="form-label">Location / Area</label>
-                                <select name="location" class="form-select">
-                                    <option value="ABC Road, near ABC College">ABC Road, near ABC College</option>
-                                    <option value="Station Square, Main Market">Station Square, Main Market</option>
-                                    <option value="MG Road, Sector 4">MG Road, Sector 4</option>
-                                    <option value="Gandhi Chowk, Civil Lines">Gandhi Chowk, Civil Lines</option>
-                                    <option value="Subhash Nagar Lane 3">Subhash Nagar Lane 3</option>
-                                </select>
-                            </div>
-                            <div style="flex: 1;">
-                                <label class="form-label">Optional Photo Evidence</label>
-                                <input type="file" name="image" id="imageInput" accept="image/*" class="form-control">
+                        <!-- Location Row -->
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="form_location_label">Location / Area</label>
+                            <div class="location-row">
+                                <!-- Hidden location input that gets filled by map picker -->
+                                <input type="hidden" name="location" id="locationHiddenInput" value="ABC Road, near ABC College">
+                                <!-- Display box showing selected location -->
+                                <div id="locationDisplay" class="location-display">
+                                    <span style="color:#6366f1;">📍</span>
+                                    <span style="font-size:0.85rem;color:#94a3b8;">ABC Road, near ABC College</span>
+                                </div>
+                                <!-- Map Picker Button -->
+                                <button type="button" class="btn-action btn-map-pick" onclick="openMapPicker()">
+                                    <span data-i18n="form_pick_map">📍 Pick on Map</span>
+                                </button>
+                                <!-- GPS Button -->
+                                <button type="button" class="btn-action btn-gps" onclick="useGpsForForm()">
+                                    <span data-i18n="form_use_gps">📡 Use My Location</span>
+                                </button>
                             </div>
                         </div>
 
-                        <!-- Sample Quick Triggers -->
-                        <div style="margin-bottom: 1.25rem;">
-                            <label class="form-label" style="font-size: 0.78rem;">Demo Test Inputs (Click to paste):</label>
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        <!-- Photo Evidence -->
+                        <div class="form-group">
+                            <label class="form-label" data-i18n="form_photo_label">Optional Photo Evidence</label>
+                            <input type="file" name="image" id="imageInput" accept="image/*" class="form-control">
+                        </div>
+
+                        <!-- Demo Quick Triggers -->
+                        <div style="margin-bottom:1.25rem;">
+                            <label class="form-label" style="font-size:0.78rem;" data-i18n="form_demo_label">Demo Test Inputs (Click to paste):</label>
+                            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
                                 <button type="button" class="btn-action" onclick="setDemoText('There is a large pothole near ABC College causing danger to students.')">Pothole 1 (EN)</button>
-                                <button type="button" class="btn-action" onclick="setDemoText('A huge pothole has appeared outside ABC College and is dangerous.')">Pothole 2 Near-Duplicate (EN)</button>
+                                <button type="button" class="btn-action" onclick="setDemoText('A huge pothole has appeared outside ABC College and is dangerous.')">Pothole 2 Near-Dup (EN)</button>
                                 <button type="button" class="btn-action" onclick="setDemoText('हमारे इलाके में पांच दिनों से कचरा नहीं उठाया गया।', 'Hindi')">Garbage (HI)</button>
                                 <button type="button" class="btn-action" onclick="setDemoText('आमच्या रस्त्यावर मोठा खड्डा पडला आहे.', 'Marathi')">Road Pothole (MR)</button>
                             </div>
                         </div>
 
+                        <!-- Action Buttons -->
                         <div class="flex-gap">
                             <button type="submit" id="submitBtn" class="btn-primary">
-                                <span>🚀</span> Submit Complaint & Process AI
+                                <span>🚀</span> <span data-i18n="form_submit_btn">Submit Complaint &amp; Process AI</span>
                             </button>
-                            <button type="button" id="voiceBtn" class="btn-voice" title="Speech to text input">
-                                <span>🎙️</span> Voice Input
+                            <button type="button" id="voiceBtn" class="btn-voice" title="Open Voice Recorder">
+                                <span>🎙️</span> <span data-i18n="form_voice_btn">Voice Input</span>
                             </button>
                         </div>
                     </form>
+
+                    <!-- ─── Voice Recorder Panel ─── -->
+                    <div id="voiceRecorderPanel" style="display:none;" class="voice-recorder-panel">
+                        <div class="voice-panel-header">
+                            <div>
+                                <div class="voice-panel-title">
+                                    <span id="voiceRecDot" class="rec-dot" style="display:none;"></span>
+                                    <span data-i18n="voice_title">Voice Complaint Recorder</span>
+                                </div>
+                                <div style="font-size:0.82rem;color:var(--text-muted);" data-i18n="voice_desc">Tap record, speak your complaint, then submit for AI transcription.</div>
+                            </div>
+                            <span class="voice-timer" id="voiceTimer">00:00</span>
+                        </div>
+
+                        <!-- Control Buttons -->
+                        <div class="voice-controls">
+                            <button id="voiceStartBtn" class="btn-voice-start" onclick="startRecording()">
+                                🎙️ <span data-i18n="voice_start">Start Recording</span>
+                            </button>
+                            <button id="voiceStopBtn" class="btn-voice-stop" onclick="stopRecording()" style="display:none;">
+                                ⏹️ <span data-i18n="voice_stop">Stop Recording</span>
+                            </button>
+                            <button id="voiceReRecordBtn" class="btn-voice-rerecord" onclick="reRecord()" style="display:none;">
+                                🔄 <span data-i18n="voice_rerecord">Re-record</span>
+                            </button>
+                            <button id="voiceSendBtn" class="btn-voice-send" onclick="sendVoiceForTranscription()" style="display:none;">
+                                📤 <span data-i18n="voice_send">Send for Transcription</span>
+                            </button>
+                        </div>
+
+                        <!-- Audio Preview -->
+                        <div id="voicePreviewLabel" style="display:none;font-size:0.82rem;color:var(--text-muted);margin-top:0.75rem;" data-i18n="voice_preview">Audio Preview:</div>
+                        <audio id="voiceAudioPreview" controls style="display:none;width:100%;margin-top:0.4rem;border-radius:8px;"></audio>
+
+                        <!-- Status Message -->
+                        <div id="voiceStatus" class="voice-status" style="display:none;"></div>
+                    </div>
                 </div>
 
-                <!-- AI Analysis Card Column -->
+                <!-- AI Analysis Result Column -->
                 <div>
                     <div id="aiResultSection">
-                        <div class="glass-card" style="text-align: center; padding: 3.5rem 2rem; color: var(--text-muted);">
-                            <div style="font-size: 3rem; margin-bottom: 1rem;">🤖</div>
-                            <h3 style="font-family: var(--font-heading); color: #fff; font-size: 1.2rem;">AI Pipeline Standing By</h3>
-                            <p style="font-size: 0.9rem; margin-top: 0.5rem; max-width: 320px; margin-left: auto; margin-right: auto;">
+                        <div class="glass-card" style="text-align:center;padding:3.5rem 2rem;color:var(--text-muted);">
+                            <div style="font-size:3rem;margin-bottom:1rem;">🤖</div>
+                            <h3 style="font-family:var(--font-heading);color:#fff;font-size:1.2rem;" data-i18n="ai_standby_title">AI Pipeline Standing By</h3>
+                            <p style="font-size:0.9rem;margin-top:0.5rem;max-width:320px;margin-left:auto;margin-right:auto;" data-i18n="ai_standby_desc">
                                 Submit a complaint on the left to see real-time AI classification, priority detection, department routing, duplicate detection, and summary.
                             </p>
                         </div>
@@ -125,49 +197,47 @@
                 </div>
 
             </div>
-
         </section>
 
-
-        <!-- ================= 2. AUTHORITY DASHBOARD SECTION ================= -->
+        <!-- ══════════ 2. AUTHORITY DASHBOARD ══════════ -->
         <section id="dashboardView" class="view-section">
-            
+
             <div class="section-header">
                 <h2 class="section-title">
-                    <span>🏢</span> Municipal Authority Command Dashboard
+                    <span>🏢</span> <span data-i18n="dash_title">Municipal Authority Command Dashboard</span>
                 </h2>
-                <p class="section-desc">Monitor grievance statistics, AI routing, duplicate clusters, and smart Officer Assistant recommendations.</p>
+                <p class="section-desc" data-i18n="dash_desc">Monitor grievance statistics, AI routing, duplicate clusters, and smart Officer Assistant recommendations.</p>
             </div>
 
-            <!-- Stats Metric Grid -->
+            <!-- Stats Grid -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-card-title">Total Complaints</div>
+                    <div class="stat-card-title" data-i18n="dash_stat_total">Total Complaints</div>
                     <div id="statTotal" class="stat-card-value">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-card-title">Pending Action</div>
-                    <div id="statPending" class="stat-card-value" style="color: #60a5fa;">0</div>
+                    <div class="stat-card-title" data-i18n="dash_stat_pending">Pending Action</div>
+                    <div id="statPending" class="stat-card-value" style="color:#60a5fa;">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-card-title">High Priority</div>
-                    <div id="statHighPriority" class="stat-card-value" style="color: #fbbf24;">0</div>
+                    <div class="stat-card-title" data-i18n="dash_stat_high">High Priority</div>
+                    <div id="statHighPriority" class="stat-card-value" style="color:#fbbf24;">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-card-title">Resolved</div>
-                    <div id="statResolved" class="stat-card-value" style="color: #34d399;">0</div>
+                    <div class="stat-card-title" data-i18n="dash_stat_resolved">Resolved</div>
+                    <div id="statResolved" class="stat-card-value" style="color:#34d399;">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-card-title">Related Clusters</div>
-                    <div id="statRelated" class="stat-card-value" style="color: #a78bfa;">0</div>
+                    <div class="stat-card-title" data-i18n="dash_stat_clusters">Related Clusters</div>
+                    <div id="statRelated" class="stat-card-value" style="color:#a78bfa;">0</div>
                 </div>
             </div>
 
             <!-- Filters Bar -->
             <div class="filter-bar">
-                <div style="flex: 1; min-width: 160px;">
+                <div style="flex:1;min-width:160px;">
                     <select id="filterCategory" class="form-select">
-                        <option value="">All Categories</option>
+                        <option value="" data-i18n="dash_filter_all_cat">All Categories</option>
                         <option value="Roads">Roads</option>
                         <option value="Waste Management">Waste Management</option>
                         <option value="Water Supply">Water Supply</option>
@@ -177,26 +247,28 @@
                         <option value="Public Safety">Public Safety</option>
                     </select>
                 </div>
-                <div style="flex: 1; min-width: 140px;">
+                <div style="flex:1;min-width:140px;">
                     <select id="filterPriority" class="form-select">
-                        <option value="">All Priorities</option>
+                        <option value="" data-i18n="dash_filter_all_pri">All Priorities</option>
                         <option value="CRITICAL">CRITICAL</option>
                         <option value="HIGH">HIGH</option>
                         <option value="MEDIUM">MEDIUM</option>
                         <option value="LOW">LOW</option>
                     </select>
                 </div>
-                <div style="flex: 1; min-width: 140px;">
+                <div style="flex:1;min-width:140px;">
                     <select id="filterStatus" class="form-select">
-                        <option value="">All Statuses</option>
+                        <option value="" data-i18n="dash_filter_all_status">All Statuses</option>
                         <option value="AI Classified">AI Classified</option>
                         <option value="Assigned">Assigned</option>
                         <option value="In Progress">In Progress</option>
                         <option value="Resolved">Resolved</option>
                     </select>
                 </div>
-                <div style="flex: 2; min-width: 200px;">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Search by text, location, or ticket ID...">
+                <div style="flex:2;min-width:200px;">
+                    <input type="text" id="searchInput" class="form-control"
+                        data-i18n-placeholder="dash_search_placeholder"
+                        placeholder="Search by text, location, or ticket ID...">
                 </div>
             </div>
 
@@ -205,34 +277,34 @@
                 <table class="custom-table">
                     <thead>
                         <tr>
-                            <th>Ticket ID</th>
-                            <th>Summary</th>
-                            <th>Category</th>
-                            <th>Priority</th>
-                            <th>Department</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Related</th>
+                            <th data-i18n="dash_col_ticket">Ticket ID</th>
+                            <th data-i18n="dash_col_summary">Summary</th>
+                            <th data-i18n="dash_col_category">Category</th>
+                            <th data-i18n="dash_col_priority">Priority</th>
+                            <th data-i18n="dash_col_department">Department</th>
+                            <th data-i18n="dash_col_status">Status</th>
+                            <th data-i18n="dash_col_date">Date</th>
+                            <th data-i18n="dash_col_related">Related</th>
                         </tr>
                     </thead>
                     <tbody id="grievanceTableBody">
                         <tr>
-                            <td colspan="8" style="text-align: center; padding: 2rem;">Loading dashboard data...</td>
+                            <td colspan="8" style="text-align:center;padding:2rem;" data-i18n="dash_loading">Loading dashboard data...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- Hotspots Visualization -->
+            <!-- Hotspots -->
             <div class="hotspot-grid">
                 <div>
-                    <h3 style="font-family: var(--font-heading); font-size: 1.15rem; margin-bottom: 0.8rem; color: #fff;">
+                    <h3 style="font-family:var(--font-heading);font-size:1.15rem;margin-bottom:0.8rem;color:#fff;" data-i18n="dash_hotspot_title">
                         📍 Live Hotspot Radar Visualization
                     </h3>
                     <div id="hotspotMap" class="map-container"></div>
                 </div>
                 <div>
-                    <h3 style="font-family: var(--font-heading); font-size: 1.15rem; margin-bottom: 0.8rem; color: #fff;">
+                    <h3 style="font-family:var(--font-heading);font-size:1.15rem;margin-bottom:0.8rem;color:#fff;" data-i18n="dash_cluster_title">
                         🔥 Active Grievance Clusters
                     </h3>
                     <div id="hotspotList"></div>
@@ -243,33 +315,59 @@
 
     </main>
 
-    <!-- ================= AUTHENTICATION MODAL ================= -->
+    <!-- ═══════ MAP PICKER MODAL ═══════ -->
+    <div id="mapPickerModal" class="modal-overlay">
+        <div class="modal-container map-modal-container">
+            <div class="modal-header">
+                <div class="modal-title">📍 <span data-i18n="map_modal_title">Pick Complaint Location</span></div>
+                <button class="btn-close" onclick="closeMapPicker()">✕</button>
+            </div>
+            <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:0.75rem;" data-i18n="map_instruction">
+                Click/tap on the map to pin your location, or drag the marker.
+            </p>
+            <!-- GPS Button -->
+            <button id="mapGpsBtn" class="btn-action" style="margin-bottom:0.75rem;" onclick="useMyLocation()">
+                <span data-i18n="map_use_gps">📡 Use My Location</span>
+            </button>
+            <!-- Error -->
+            <div id="mapPickerError" style="display:none;color:#fca5a5;font-size:0.84rem;margin-bottom:0.5rem;"></div>
+            <!-- Map Container -->
+            <div id="leafletPickerMap" style="width:100%;height:380px;border-radius:12px;overflow:hidden;"></div>
+            <!-- Selected Location Display -->
+            <div style="margin-top:0.85rem;padding:0.75rem;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:10px;">
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.3rem;" data-i18n="map_selected">Selected Location:</div>
+                <div style="font-size:0.85rem;color:#a5b4fc;" id="pickerAddress">—</div>
+                <div style="font-size:0.75rem;color:#64748b;margin-top:0.2rem;" id="pickerCoords"></div>
+            </div>
+            <!-- Confirm / Cancel -->
+            <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+                <button class="btn-primary" style="flex:1;" onclick="confirmLocation()">
+                    ✅ <span data-i18n="map_confirm_btn">Confirm Location</span>
+                </button>
+                <button class="btn-action" onclick="closeMapPicker()">
+                    <span data-i18n="map_cancel_btn">Cancel</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════ AUTH MODAL ═══════ -->
     <div id="authModal" class="modal-overlay">
-        <div class="modal-container" style="max-width: 480px; padding: 2.2rem;">
-            <div class="modal-header" style="margin-bottom: 1rem;">
-                <div class="modal-title" style="font-size: 1.25rem;">🔐 Portal Access Control</div>
+        <div class="modal-container" style="max-width:480px;padding:2.2rem;">
+            <div class="modal-header" style="margin-bottom:1rem;">
+                <div class="modal-title" style="font-size:1.25rem;">🔐 Portal Access Control</div>
                 <button class="btn-close" onclick="closeAuthModal()">✕</button>
             </div>
-
-            <!-- Subtab Portal Selector -->
             <div class="auth-subtabs">
-                <button id="subTabCitizen" class="auth-subtab-btn active" onclick="switchAuthSubTab('citizen')">
-                    👤 Citizen Portal
-                </button>
-                <button id="subTabAdmin" class="auth-subtab-btn" onclick="switchAuthSubTab('admin')">
-                    🛡️ Municipal Admin Portal
-                </button>
+                <button id="subTabCitizen" class="auth-subtab-btn active" onclick="switchAuthSubTab('citizen')">👤 Citizen Portal</button>
+                <button id="subTabAdmin" class="auth-subtab-btn" onclick="switchAuthSubTab('admin')">🛡️ Municipal Admin Portal</button>
             </div>
-
-            <!-- Citizen Portal Auth Card -->
+            <!-- Citizen Auth -->
             <div id="citizenAuthCard">
-                <!-- Citizen Login Form -->
                 <div id="citizenLoginSection">
-                    <h3 style="font-size: 1.05rem; margin-bottom: 0.3rem;">Citizen Account Login</h3>
-                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Log in to submit and track your civic grievances.</p>
-                    
+                    <h3 style="font-size:1.05rem;margin-bottom:0.3rem;">Citizen Account Login</h3>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">Log in to submit and track your civic grievances.</p>
                     <div id="citizenAuthError" class="auth-error-box"></div>
-
                     <form id="citizenLoginForm">
                         <div class="form-group">
                             <label class="form-label">Citizen Email</label>
@@ -279,25 +377,17 @@
                             <label class="form-label">Password</label>
                             <input type="password" id="citizenPassword" class="form-control" placeholder="••••••••" required>
                         </div>
-                        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                        <button type="submit" class="btn-primary" style="width:100%;margin-top:0.5rem;">
                             <span>👤</span> Log In as Citizen
                         </button>
                     </form>
-
-                    <button type="button" class="btn-demo-login" onclick="demoQuickLogin('citizen')">
-                        ⚡ 1-Click Demo Citizen Login
-                    </button>
-
-                    <div style="text-align: center; margin-top: 1.2rem; font-size: 0.85rem; color: var(--text-muted);">
-                        New Citizen? <a href="#" onclick="toggleRegisterMode(true); return false;" style="color: var(--accent); font-weight: 700;">Create Account</a>
+                    <button type="button" class="btn-demo-login" onclick="demoQuickLogin('citizen')">⚡ 1-Click Demo Citizen Login</button>
+                    <div style="text-align:center;margin-top:1.2rem;font-size:0.85rem;color:var(--text-muted);">
+                        New Citizen? <a href="#" onclick="toggleRegisterMode(true);return false;" style="color:var(--accent);font-weight:700;">Create Account</a>
                     </div>
                 </div>
-
-                <!-- Citizen Register Form -->
-                <div id="citizenRegisterSection" style="display: none;">
-                    <h3 style="font-size: 1.05rem; margin-bottom: 0.3rem;">Register New Citizen Account</h3>
-                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Join the smart civic grievance network.</p>
-
+                <div id="citizenRegisterSection" style="display:none;">
+                    <h3 style="font-size:1.05rem;margin-bottom:0.3rem;">Register New Citizen Account</h3>
                     <form id="citizenRegisterForm">
                         <div class="form-group">
                             <label class="form-label">Full Name</label>
@@ -315,24 +405,20 @@
                             <label class="form-label">Password</label>
                             <input type="password" id="regPassword" class="form-control" placeholder="••••••••" required>
                         </div>
-                        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                        <button type="submit" class="btn-primary" style="width:100%;margin-top:0.5rem;">
                             <span>✍️</span> Register Account
                         </button>
                     </form>
-
-                    <div style="text-align: center; margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
-                        Already registered? <a href="#" onclick="toggleRegisterMode(false); return false;" style="color: var(--primary); font-weight: 700;">Back to Login</a>
+                    <div style="text-align:center;margin-top:1rem;font-size:0.85rem;color:var(--text-muted);">
+                        Already registered? <a href="#" onclick="toggleRegisterMode(false);return false;" style="color:var(--primary);font-weight:700;">Back to Login</a>
                     </div>
                 </div>
             </div>
-
-            <!-- Municipal Admin Portal Auth Card -->
-            <div id="adminAuthCard" style="display: none;">
-                <h3 style="font-size: 1.05rem; margin-bottom: 0.3rem; color: var(--accent);">Municipal Corporation Officer Login</h3>
-                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Restricted to official municipal corporation employees.</p>
-
+            <!-- Admin Auth -->
+            <div id="adminAuthCard" style="display:none;">
+                <h3 style="font-size:1.05rem;margin-bottom:0.3rem;color:var(--accent);">Municipal Corporation Officer Login</h3>
+                <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">Restricted to official municipal corporation employees.</p>
                 <div id="adminAuthError" class="auth-error-box"></div>
-
                 <form id="adminLoginForm">
                     <div class="form-group">
                         <label class="form-label">Official Employee Email</label>
@@ -342,45 +428,78 @@
                         <label class="form-label">Password</label>
                         <input type="password" id="adminPassword" class="form-control" placeholder="••••••••" required>
                     </div>
-                    <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, var(--accent), #0284c7); width: 100%; margin-top: 0.5rem;">
+                    <button type="submit" class="btn-primary" style="background:linear-gradient(135deg,var(--accent),#0284c7);width:100%;margin-top:0.5rem;">
                         <span>🛡️</span> Log In as Municipal Official Admin
                     </button>
                 </form>
-
-                <button type="button" class="btn-demo-login" onclick="demoQuickLogin('admin')" style="border-color: rgba(6, 182, 212, 0.4);">
+                <button type="button" class="btn-demo-login" onclick="demoQuickLogin('admin')" style="border-color:rgba(6,182,212,0.4);">
                     🛡️ 1-Click Demo Municipal Admin Login
                 </button>
-
-                <div style="margin-top: 1rem; padding: 0.8rem; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; font-size: 0.78rem; color: #fef08a;">
+                <div style="margin-top:1rem;padding:0.8rem;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:0.78rem;color:#fef08a;">
                     ⚠️ <strong>Notice:</strong> Citizens are strictly prohibited from logging in through this official municipal portal.
                 </div>
             </div>
-
         </div>
     </div>
 
-    <!-- Complaint Detail & Officer Assistant Modal -->
+    <!-- ═══════ DETAIL MODAL ═══════ -->
     <div id="detailModal" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-header">
                 <div class="modal-title">Grievance Record Details</div>
                 <button class="btn-close" onclick="closeModal()">✕</button>
             </div>
-            <div id="modalContentBody">
-                <!-- Modal content injected dynamically -->
-            </div>
+            <div id="modalContentBody"></div>
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- ═══════ SCRIPTS ═══════ -->
+    <!-- i18n must load first -->
+    <script src="/static/js/i18n.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- App scripts -->
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/app.js"></script>
     <script src="/static/js/dashboard.js"></script>
     <script src="/static/js/map.js"></script>
+    <script src="/static/js/location_picker.js"></script>
+
     <script>
-        function setDemoText(text, lang = 'English') {
-            document.getElementById('complaintText').value = text;
-            document.getElementById('languageSelect').value = lang;
+        // GPS shortcut from the form (not map modal)
+        function useGpsForForm() {
+            if (!navigator.geolocation) {
+                alert('Geolocation not supported in this browser.');
+                return;
+            }
+            const btn = event.currentTarget;
+            btn.disabled = true;
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    // Reverse geocode
+                    let address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    try {
+                        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+                        const d = await r.json();
+                        if (d.display_name) address = d.display_name;
+                    } catch {}
+                    document.getElementById('locationHiddenInput').value = address;
+                    document.getElementById('locationDisplay').innerHTML =
+                        `<span style="color:#34d399;">📡</span>
+                         <span style="font-size:0.85rem;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;" title="${address}">${address}</span>
+                         <span style="font-size:0.75rem;color:#64748b;">(${lat.toFixed(4)}, ${lng.toFixed(4)})</span>`;
+                    // Sync with location_picker state
+                    selectedLocation = { lat, lng, address };
+                    btn.disabled = false;
+                },
+                () => {
+                    alert(t('map_gps_error'));
+                    btn.disabled = false;
+                },
+                { timeout: 8000 }
+            );
         }
 
         // Auto-switch to dashboard if redirected from admin login (?view=dashboard)
@@ -391,5 +510,6 @@
             }
         });
     </script>
+
 </body>
 </html>
