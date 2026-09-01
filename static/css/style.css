@@ -988,8 +988,10 @@ textarea.form-control {
 audio {
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    filter: invert(1) hue-rotate(180deg);
-    height: 36px;
+    height: 40px;
+    width: 100%;
+    background: rgba(15,23,42,0.6);
+    margin-top: 0.25rem;
 }
 
 /* Voice Status Messages */

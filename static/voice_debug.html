@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Recording Diagnostic</title>
+<style>
+  body { font-family: monospace; background: #0b0f19; color: #f0f9ff; padding: 2rem; margin: 0; }
+  h1  { color: #67e8f9; margin-bottom: 0.3rem; }
+  .sub { color: #94a3b8; font-size: 0.85rem; margin-bottom: 2rem; }
+  button {
+    padding: 0.7rem 1.4rem; border: none; border-radius: 8px;
+    font-family: monospace; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; margin-right: 0.5rem; margin-bottom: 0.5rem;
+  }
+  #startBtn  { background: #6366f1; color: #fff; }
+  #stopBtn   { background: #ef4444; color: #fff; }
+  #startBtn:disabled, #stopBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+  canvas { display: block; border: 1px solid #1e293b; border-radius: 8px; margin: 1rem 0; background: #060c17; }
+  #log   { background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 1rem; font-size: 0.8rem; line-height: 1.8; white-space: pre-wrap; max-height: 260px; overflow-y: auto; }
+  .ok   { color: #34d399; }
+  .warn { color: #fbbf24; }
+  .err  { color: #f87171; }
+  audio { display: none; width: 100%; margin-top: 0.5rem; border-radius: 8px; }
+  #blobInfo { color: #a5b4fc; font-size: 0.82rem; margin-top: 0.5rem; }
+  a#dlLink  { display: none; color: #67e8f9; font-size: 0.85rem; margin-top: 0.5rem; }
+  label { font-size: 0.82rem; color: #94a3b8; }
+  select { background: #0f172a; color: #f0f9ff; border: 1px solid #334155; border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.85rem; margin-left: 0.4rem; }
+  .level-bar { width: 100%; height: 10px; background: #1e293b; border-radius: 10px; overflow: hidden; margin-bottom: 0.5rem; }
+  .level-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #34d399, #fbbf24, #ef4444); transition: width 0.05s; border-radius: 10px; }
+  #deviceRow { margin-bottom: 1rem; }
+</style>
+</head>
+<body>
+
+<h1>🎙️ Voice Recording Diagnostic</h1>
+<p class="sub">This page isolates and tests MediaRecorder independently of the main app.<br>
+Open DevTools Console (F12) for full logs. <a href="/" style="color:#67e8f9;">← Back to App</a></p>
+
+<div id="deviceRow">
+  <label>Microphone: <select id="micSelect"></select></label>
+</div>
+
+<div>
+  <button id="startBtn">▶ Start Recording</button>
+  <button id="stopBtn" disabled>⏹ Stop Recording</button>
+</div>
+
+<!-- Live audio level meter -->
+<div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
+
+<!-- Waveform canvas -->
+<canvas id="waveCanvas" width="600" height="90"></canvas>
+
+<!-- Playback -->
+<audio id="audioPreview" controls></audio>
+<div id="blobInfo"></div>
+<a id="dlLink" download="recording.webm">⬇ Download recorded file</a>
+
+<!-- Log -->
+<pre id="log">Waiting to start...</pre>
+
+<script>
+let mediaRecorder, audioChunks = [], micStream;
+let audioCtx, analyser, animId;
+let _objectUrl = null;
+
+const log    = document.getElementById('log');
+const canvas = document.getElementById('waveCanvas');
+const canCtx = canvas.getContext('2d');
+const levelFill = document.getElementById('levelFill');
+
+function logLine(msg, cls = '') {
+  const ts = new Date().toISOString().substring(11, 23);
+  log.innerHTML += `\n<span class="${cls}">[${ts}] ${msg}</span>`;
+  log.scrollTop = log.scrollHeight;
+  console.log(`[DIAG] ${msg}`);
+}
+
+// ── Enumerate devices ──────────────────────────────────────
+async function enumDevices() {
+  try {
+    // Request permission first so labels are populated
+    const tmp = await navigator.mediaDevices.getUserMedia({ audio: true });
+    tmp.getTracks().forEach(t => t.stop());
+  } catch(e) { logLine('Could not get permission to list devices: ' + e.message, 'err'); }
+
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const mics = devices.filter(d => d.kind === 'audioinput');
+  const sel = document.getElementById('micSelect');
+  sel.innerHTML = '';
+  mics.forEach((d, i) => {
+    const opt = document.createElement('option');
+    opt.value = d.deviceId;
+    opt.textContent = d.label || `Microphone ${i + 1}`;
+    sel.appendChild(opt);
+  });
+  logLine(`Found ${mics.length} audio input device(s)`, mics.length ? 'ok' : 'warn');
+  mics.forEach(d => logLine(`  • ${d.label || d.deviceId}`));
+}
+enumDevices();
+
+// ── Start recording ────────────────────────────────────────
+document.getElementById('startBtn').onclick = async () => {
+  log.textContent = 'Starting...';
+  audioChunks = [];
+
+  const deviceId = document.getElementById('micSelect').value;
+  const constraints = {
+    audio: deviceId ? { deviceId: { exact: deviceId } } : true
+  };
+
+  logLine('Requesting getUserMedia with: ' + JSON.stringify(constraints));
+
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch(err) {
+    logLine('getUserMedia FAILED: ' + err.name + ' – ' + err.message, 'err');
+    return;
+  }
+
+  const tracks = micStream.getAudioTracks();
+  logLine(`Got stream. Audio tracks: ${tracks.length}`, tracks.length ? 'ok' : 'err');
+  if (tracks.length === 0) { logLine('No audio tracks — recording aborted.', 'err'); return; }
+
+  const t0 = tracks[0];
+  logLine(`Track: "${t0.label}", muted=${t0.muted}, enabled=${t0.enabled}, readyState=${t0.readyState}`, 'ok');
+  const settings = t0.getSettings();
+  logLine(`Settings: sr=${settings.sampleRate}, ch=${settings.channelCount}, ec=${settings.echoCancellation}`);
+
+  // AudioContext for visualization AND level detection
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const source = audioCtx.createMediaStreamSource(micStream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  analyser.smoothingTimeConstant = 0.4;
+  source.connect(analyser);
+  logLine(`AudioContext state: ${audioCtx.state}`);
+  drawLoop();
+
+  // Find best MIME type
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+    'audio/mp4',
+  ];
+  const supported = candidates.filter(c => MediaRecorder.isTypeSupported(c));
+  logLine(`Supported MIME types: ${supported.join(', ') || 'none'}`);
+  const mimeType = supported[0] || '';
+  logLine(`Using MIME type: "${mimeType || '(browser default)'}"`, mimeType ? 'ok' : 'warn');
+
+  const options = mimeType ? { mimeType } : {};
+  try {
+    mediaRecorder = new MediaRecorder(micStream, options);
+  } catch(e) {
+    logLine(`MediaRecorder() with options failed (${e.message}), retrying without options…`, 'warn');
+    mediaRecorder = new MediaRecorder(micStream);
+  }
+
+  logLine(`MediaRecorder created. mimeType="${mediaRecorder.mimeType}", state="${mediaRecorder.state}"`, 'ok');
+
+  mediaRecorder.ondataavailable = (e) => {
+    logLine(`ondataavailable: size=${e.data.size} bytes`);
+    if (e.data.size > 0) audioChunks.push(e.data);
+  };
+
+  mediaRecorder.onerror = (e) => {
+    logLine('MediaRecorder ERROR: ' + (e.error?.name || e), 'err');
+  };
+
+  mediaRecorder.onstop = () => {
+    logLine(`onstop fired. Total chunks: ${audioChunks.length}`, 'ok');
+    const totalBytes = audioChunks.reduce((s, c) => s + c.size, 0);
+    logLine(`Total audio data: ${totalBytes} bytes`);
+
+    if (audioChunks.length === 0 || totalBytes === 0) {
+      logLine('⚠ No audio data captured! Blob will be empty/silent.', 'err');
+    }
+
+    const recordedMime = mediaRecorder.mimeType || 'audio/webm';
+    const blobMime = recordedMime.split(';')[0];
+    const blob = new Blob(audioChunks, { type: blobMime });
+    logLine(`Blob created: ${blob.size} bytes, type="${blob.type}"`, blob.size > 1000 ? 'ok' : 'warn');
+
+    if (_objectUrl) URL.revokeObjectURL(_objectUrl);
+    _objectUrl = URL.createObjectURL(blob);
+
+    const audio = document.getElementById('audioPreview');
+    audio.src = '';
+    audio.load();
+    audio.src = _objectUrl;
+    audio.controls = true;
+    audio.style.display = 'block';
+
+    document.getElementById('blobInfo').textContent =
+      `Blob: ${blob.size.toLocaleString()} bytes | type: ${blob.type} | chunks: ${audioChunks.length}`;
+
+    const dl = document.getElementById('dlLink');
+    dl.href = _objectUrl;
+    dl.download = `recording.${blobMime.includes('ogg') ? 'ogg' : blobMime.includes('mp4') ? 'mp4' : 'webm'}`;
+    dl.style.display = 'block';
+
+    // Cleanup
+    micStream.getTracks().forEach(t => t.stop());
+    cancelAnimationFrame(animId);
+    if (audioCtx) audioCtx.close();
+
+    logLine('Done. Press Play on the audio player below to verify audio.', 'ok');
+  };
+
+  // START — no timeslice: one clean chunk at stop
+  mediaRecorder.start();
+  logLine(`Recording started (no timeslice). mediaRecorder.state="${mediaRecorder.state}"`, 'ok');
+
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('stopBtn').disabled = false;
+};
+
+// ── Stop recording ─────────────────────────────────────────
+document.getElementById('stopBtn').onclick = () => {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    logLine(`Stopping. Current state: "${mediaRecorder.state}"`);
+    mediaRecorder.stop();
+  }
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stopBtn').disabled = true;
+};
+
+// ── Waveform + level meter ─────────────────────────────────
+function drawLoop() {
+  animId = requestAnimationFrame(drawLoop);
+
+  const bufLen = analyser.frequencyBinCount;
+  const data = new Uint8Array(bufLen);
+  analyser.getByteTimeDomainData(data);
+
+  // Level (RMS)
+  let rms = 0;
+  for (let i = 0; i < bufLen; i++) {
+    const v = (data[i] - 128) / 128;
+    rms += v * v;
+  }
+  rms = Math.sqrt(rms / bufLen);
+  levelFill.style.width = Math.min(rms * 400, 100) + '%';
+
+  // Waveform
+  const w = canvas.width, h = canvas.height;
+  canCtx.fillStyle = '#060c17';
+  canCtx.fillRect(0, 0, w, h);
+  canCtx.strokeStyle = '#6366f1';
+  canCtx.lineWidth = 1.5;
+  canCtx.beginPath();
+  const slW = w / bufLen;
+  let x = 0;
+  for (let i = 0; i < bufLen; i++) {
+    const y = (data[i] / 255) * h;
+    i === 0 ? canCtx.moveTo(x, y) : canCtx.lineTo(x, y);
+    x += slW;
+  }
+  canCtx.stroke();
+}
+</script>
+</body>
+</html>

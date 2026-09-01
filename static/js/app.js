@@ -60,19 +60,23 @@ document.addEventListener('DOMContentLoaded', () => {
 // ═══════════════════════════════════════════════════════════
 // VOICE RECORDER
 // ═══════════════════════════════════════════════════════════
-let mediaRecorder = null;
-let audioChunks   = [];
-let audioBlob     = null;
-let recordingTimer = null;
+let mediaRecorder    = null;
+let audioChunks      = [];
+let audioBlob        = null;
+let recordingTimer   = null;
 let recordingSeconds = 0;
-let isRecording   = false;
-let micStream     = null;
+let isRecording      = false;
+let micStream        = null;
+let _previewObjectUrl = null;
+
+// AudioContext for live level visualizer
+let _audioCtx        = null;
+let _analyser        = null;
+let _levelAnimId     = null;
 
 function initVoiceRecorder() {
     const voiceOpenBtn = document.getElementById('voiceBtn');
     if (!voiceOpenBtn) return;
-
-    // Replace button to open the dedicated voice panel
     voiceOpenBtn.onclick = toggleVoicePanel;
 }
 
@@ -84,56 +88,112 @@ function toggleVoicePanel() {
     if (!isOpen) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function startRecording() {
+async function startRecording() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         showVoiceError(t('voice_err_unsupported'));
         return;
     }
 
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            micStream = stream;
-            audioChunks = [];
-            audioBlob = null;
+    clearVoiceStatus();
 
-            // Pick best supported MIME type
-            const mimeType = getSupportedMimeType();
-            const options = mimeType ? { mimeType } : {};
-
-            try {
-                mediaRecorder = new MediaRecorder(stream, options);
-            } catch {
-                mediaRecorder = new MediaRecorder(stream);
+    // Prefer high-gain voice constraints, fallback to { audio: true }
+    let stream = null;
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: false, // Don't over-filter quiet speech
+                autoGainControl: true
             }
-
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) audioChunks.push(e.data);
-            };
-
-            mediaRecorder.onstop = () => {
-                stopMicStream();
-                const type = mediaRecorder.mimeType || 'audio/webm';
-                audioBlob = new Blob(audioChunks, { type });
-                showVoicePreview(audioBlob);
-                setVoiceState('preview');
-            };
-
-            mediaRecorder.start(200); // collect data every 200ms
-            isRecording = true;
-            setVoiceState('recording');
-            startTimer();
-        })
-        .catch(err => {
+        });
+    } catch (_) {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                 showVoiceError(t('voice_err_permission'));
             } else {
-                showVoiceError(t('voice_err_unsupported'));
+                showVoiceError(`${t('voice_err_unsupported')} (${err.name}: ${err.message})`);
             }
-        });
+            return;
+        }
+    }
+
+    const tracks = stream.getAudioTracks();
+    if (tracks.length === 0) {
+        stream.getTracks().forEach(tr => tr.stop());
+        showVoiceError(t('voice_err_permission'));
+        return;
+    }
+
+    micStream   = stream;
+    audioChunks = [];
+    audioBlob   = null;
+
+    // ── Live visualizer via AudioContext ──────────────────────
+    startLevelMeter(stream);
+
+    // ── Choose MIME type ──────────────────────────────────────
+    const mimeType = getSupportedMimeType();
+    let mediaRecorderOptions = {};
+    if (mimeType && MediaRecorder.isTypeSupported(mimeType)) {
+        mediaRecorderOptions = { mimeType };
+    }
+
+    try {
+        mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
+    } catch (_) {
+        mediaRecorder = new MediaRecorder(stream);
+    }
+
+    mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+            audioChunks.push(e.data);
+        }
+    };
+
+    mediaRecorder.onstop = () => {
+        stopLevelMeter();
+        stopMicStream();
+
+        const recordedMime = mediaRecorder.mimeType || 'audio/webm';
+        const blobMime     = recordedMime.split(';')[0]; // "audio/webm"
+
+        if (audioChunks.length === 0) {
+            showVoiceError(t('voice_err_no_speech'));
+            setVoiceState('idle');
+            return;
+        }
+
+        audioBlob = new Blob(audioChunks, { type: blobMime });
+        showVoicePreview(audioBlob);
+        setVoiceState('preview');
+    };
+
+    mediaRecorder.onerror = (e) => {
+        console.error('MediaRecorder error:', e);
+        showVoiceError(t('voice_err_failed') + ' (' + (e.error?.name || 'unknown') + ')');
+        stopLevelMeter();
+        stopMicStream();
+        setVoiceState('idle');
+        stopTimer();
+    };
+
+    // Start recording without timeslice to produce clean header
+    mediaRecorder.start();
+    isRecording = true;
+    setVoiceState('recording');
+    startTimer();
 }
 
 function stopRecording() {
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try {
+            // Request any buffered data before stopping
+            if (typeof mediaRecorder.requestData === 'function') {
+                mediaRecorder.requestData();
+            }
+        } catch (_) {}
         mediaRecorder.stop();
     }
     isRecording = false;
@@ -143,38 +203,39 @@ function stopRecording() {
 function reRecord() {
     audioBlob = null;
     audioChunks = [];
+    stopLevelMeter();
     stopMicStream();
 
-    const preview = document.getElementById('voiceAudioPreview');
-    if (preview) { preview.src = ''; preview.style.display = 'none'; }
+    const audioWrapper = document.getElementById('voiceAudioWrapper');
+    if (audioWrapper) audioWrapper.style.display = 'none';
 
     const previewLabel = document.getElementById('voicePreviewLabel');
     if (previewLabel) previewLabel.style.display = 'none';
 
-    const sendBtn = document.getElementById('voiceSendBtn');
-    if (sendBtn) sendBtn.style.display = 'none';
+    const audio = document.getElementById('voiceAudioPreview');
+    if (audio) { audio.src = ''; }
 
     setVoiceState('idle');
     clearVoiceStatus();
 }
 
 async function sendVoiceForTranscription() {
-    if (!audioBlob) {
+    if (!audioBlob || audioBlob.size === 0) {
         showVoiceError(t('voice_err_no_speech'));
         return;
     }
 
-    const sendBtn = document.getElementById('voiceSendBtn');
+    const sendBtn  = document.getElementById('voiceSendBtn');
     const statusEl = document.getElementById('voiceStatus');
     if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = t('voice_transcribing'); }
-    if (statusEl) { statusEl.textContent = t('voice_transcribing'); statusEl.className = 'voice-status info'; statusEl.style.display='block'; }
+    if (statusEl) { statusEl.textContent = t('voice_transcribing'); statusEl.className = 'voice-status info'; statusEl.style.display = 'block'; }
 
     const ext = audioBlob.type.includes('ogg') ? 'ogg' : audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
     const formData = new FormData();
     formData.append('audio', audioBlob, `voice.${ext}`);
 
     try {
-        const res = await fetch('/api/voice', { method: 'POST', body: formData });
+        const res  = await fetch('/api/voice', { method: 'POST', body: formData });
         const data = await res.json();
 
         if (data.success && data.transcription) {
@@ -182,9 +243,8 @@ async function sendVoiceForTranscription() {
             if (textArea) textArea.value = data.transcription;
             if (statusEl) {
                 statusEl.textContent = t('voice_success');
-                statusEl.className = 'voice-status success';
+                statusEl.className   = 'voice-status success';
             }
-            // Collapse panel after a moment
             setTimeout(() => {
                 const panel = document.getElementById('voiceRecorderPanel');
                 if (panel) panel.style.display = 'none';
@@ -199,6 +259,92 @@ async function sendVoiceForTranscription() {
     }
 }
 
+// ─── Visualizer / Level Meter ──────────────────────────────
+function startLevelMeter(stream) {
+    const vizContainer = document.getElementById('voiceVisualizerContainer');
+    if (vizContainer) vizContainer.style.display = 'block';
+
+    try {
+        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (_audioCtx.state === 'suspended') {
+            _audioCtx.resume();
+        }
+        const src = _audioCtx.createMediaStreamSource(stream);
+        _analyser = _audioCtx.createAnalyser();
+        _analyser.fftSize = 256;
+        _analyser.smoothingTimeConstant = 0.4;
+        src.connect(_analyser);
+        drawLevelMeter();
+    } catch (err) {
+        console.warn('Live audio visualizer not active:', err);
+    }
+}
+
+function drawLevelMeter() {
+    if (!_analyser) return;
+
+    const levelMeter = document.getElementById('voiceLevelMeter');
+    const levelText  = document.getElementById('voiceLevelText');
+    const canvas     = document.getElementById('voiceWaveCanvas');
+
+    const bufferLength = _analyser.frequencyBinCount;
+    const dataArray    = new Uint8Array(bufferLength);
+    _analyser.getByteTimeDomainData(dataArray);
+
+    // Calculate RMS volume level (0 to 100%)
+    let sum = 0;
+    for (let i = 0; i < bufferLength; i++) {
+        const norm = (dataArray[i] - 128) / 128;
+        sum += norm * norm;
+    }
+    const rms   = Math.sqrt(sum / bufferLength);
+    const pct   = Math.min(Math.round(rms * 350), 100);
+
+    if (levelMeter) levelMeter.style.width = `${pct}%`;
+    if (levelText)  levelText.textContent  = `${pct}%`;
+
+    // Draw waveform on canvas
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const w   = canvas.width;
+        const h   = canvas.height;
+        ctx.fillStyle = 'rgba(11, 15, 25, 0.5)';
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.lineWidth   = 2;
+        ctx.strokeStyle = pct > 10 ? '#34d399' : '#6366f1';
+        ctx.beginPath();
+
+        const sliceWidth = w / bufferLength;
+        let x = 0;
+        for (let i = 0; i < bufferLength; i++) {
+            const v = dataArray[i] / 128.0;
+            const y = (v * h) / 2;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+            x += sliceWidth;
+        }
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
+    }
+
+    _levelAnimId = requestAnimationFrame(drawLevelMeter);
+}
+
+function stopLevelMeter() {
+    if (_levelAnimId) {
+        cancelAnimationFrame(_levelAnimId);
+        _levelAnimId = null;
+    }
+    if (_audioCtx) {
+        try { _audioCtx.close(); } catch (_) {}
+        _audioCtx = null;
+        _analyser = null;
+    }
+    const vizContainer = document.getElementById('voiceVisualizerContainer');
+    if (vizContainer) vizContainer.style.display = 'none';
+}
+
 // ─── State Machine ─────────────────────────────────────────
 function setVoiceState(state) {
     const startBtn    = document.getElementById('voiceStartBtn');
@@ -208,20 +354,26 @@ function setVoiceState(state) {
     const timerEl     = document.getElementById('voiceTimer');
     const dotEl       = document.getElementById('voiceRecDot');
 
-    const show = (el, v) => { if(el) el.style.display = v ? 'inline-flex' : 'none'; };
+    const show = (el, v) => { if (el) el.style.display = v ? 'inline-flex' : 'none'; };
 
     if (state === 'idle') {
-        show(startBtn, true); show(stopBtn, false);
-        show(reRecordBtn, false); show(sendBtn, false);
+        show(startBtn, true);
+        show(stopBtn, false);
+        show(reRecordBtn, false);
+        show(sendBtn, false);
         if (timerEl) timerEl.textContent = '00:00';
         if (dotEl) dotEl.style.display = 'none';
     } else if (state === 'recording') {
-        show(startBtn, false); show(stopBtn, true);
-        show(reRecordBtn, false); show(sendBtn, false);
+        show(startBtn, false);
+        show(stopBtn, true);
+        show(reRecordBtn, false);
+        show(sendBtn, false);
         if (dotEl) dotEl.style.display = 'inline-block';
     } else if (state === 'preview') {
-        show(startBtn, false); show(stopBtn, false);
-        show(reRecordBtn, true); show(sendBtn, true);
+        show(startBtn, false);
+        show(stopBtn, false);
+        show(reRecordBtn, true);
+        show(sendBtn, true);
         if (dotEl) dotEl.style.display = 'none';
     }
 }
@@ -233,7 +385,6 @@ function startTimer() {
     recordingTimer = setInterval(() => {
         recordingSeconds++;
         updateTimerDisplay();
-        // Auto stop at 60 seconds
         if (recordingSeconds >= 60) stopRecording();
     }, 1000);
 }
@@ -253,11 +404,40 @@ function updateTimerDisplay() {
 
 // ─── Audio Preview ──────────────────────────────────────────
 function showVoicePreview(blob) {
-    const url = URL.createObjectURL(blob);
-    const audio = document.getElementById('voiceAudioPreview');
-    const label = document.getElementById('voicePreviewLabel');
-    if (audio) { audio.src = url; audio.style.display = 'block'; }
-    if (label) label.style.display = 'block';
+    const audioWrapper = document.getElementById('voiceAudioWrapper');
+    const audio        = document.getElementById('voiceAudioPreview');
+    const label        = document.getElementById('voicePreviewLabel');
+    const sizeMeta     = document.getElementById('voiceBlobSize');
+    const dlLink       = document.getElementById('voiceDownloadLink');
+
+    if (_previewObjectUrl) {
+        URL.revokeObjectURL(_previewObjectUrl);
+        _previewObjectUrl = null;
+    }
+
+    _previewObjectUrl = URL.createObjectURL(blob);
+
+    if (audio) {
+        audio.src      = '';
+        audio.load();
+        audio.src      = _previewObjectUrl;
+        audio.volume   = 1.0;
+        audio.controls = true;
+    }
+
+    if (sizeMeta) {
+        const kb = (blob.size / 1024).toFixed(1);
+        sizeMeta.textContent = `Size: ${kb} KB (${blob.type || 'audio/webm'})`;
+    }
+
+    if (dlLink) {
+        dlLink.href     = _previewObjectUrl;
+        const ext       = blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mp4') ? 'mp4' : 'webm';
+        dlLink.download = `complaint_recording.${ext}`;
+    }
+
+    if (label)        label.style.display        = 'block';
+    if (audioWrapper) audioWrapper.style.display = 'block';
 }
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -282,7 +462,7 @@ function showVoiceError(msg) {
     const el = document.getElementById('voiceStatus');
     if (el) {
         el.textContent = msg;
-        el.className = 'voice-status error';
+        el.className   = 'voice-status error';
         el.style.display = 'block';
     }
 }
