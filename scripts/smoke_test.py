@@ -98,5 +98,35 @@ class TestGrievancePlatform(unittest.TestCase):
         self.assertIn("message", data)
         print("[PASS] Voice fallback test passed.")
 
+    def test_08_auth_role_restriction(self):
+        # 1. Citizen login via Citizen Portal -> Should succeed
+        c_res = client.post("/api/auth/login", json={
+            "email": "citizen@city.gov.in",
+            "password": "citizen123",
+            "portal_type": "citizen"
+        })
+        self.assertEqual(c_res.status_code, 200)
+        self.assertEqual(c_res.json()["role"], "citizen")
+
+        # 2. Municipal Admin login via Admin Portal -> Should succeed
+        a_res = client.post("/api/auth/login", json={
+            "email": "admin@mc.gov.in",
+            "password": "admin123",
+            "portal_type": "admin"
+        })
+        self.assertEqual(a_res.status_code, 200)
+        self.assertEqual(a_res.json()["role"], "admin")
+
+        # 3. Citizen attempting Admin login via Admin Portal -> MUST FAIL WITH 403 FORBIDDEN
+        forbidden_res = client.post("/api/auth/login", json={
+            "email": "citizen@city.gov.in",
+            "password": "citizen123",
+            "portal_type": "admin"
+        })
+        self.assertEqual(forbidden_res.status_code, 403)
+        self.assertIn("Access Denied", forbidden_res.json()["detail"])
+        print("[PASS] Auth role access control test passed (Citizens blocked from Admin portal).")
+
 if __name__ == "__main__":
     unittest.main()
+

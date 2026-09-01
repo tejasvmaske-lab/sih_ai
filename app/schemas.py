@@ -35,7 +35,31 @@ class GrievanceResponse(BaseModel):
 class GrievanceStatusUpdate(BaseModel):
     status: str
 
+class UserLogin(BaseModel):
+    email: str
+    password: str
+    portal_type: str = "citizen"  # "citizen" or "admin"
+
+class UserRegister(BaseModel):
+    email: str
+    username: str
+    password: str
+    full_name: str
+    role: Optional[str] = "citizen"
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    username: str
+    role: str
+    full_name: str
+    department: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
 class OfficerAssistRequest(BaseModel):
+
     complaint_id: int
 
 class OfficerAssistResponse(BaseModel):

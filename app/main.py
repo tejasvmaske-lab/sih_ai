@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.config import BASE_DIR, OPENAI_API_KEY
-from app.routers import grievances, dashboard, officer, voice
+from app.routers import grievances, dashboard, officer, voice, auth
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -36,10 +36,12 @@ app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 templates = Jinja2Templates(directory=str(templates_path))
 
 # Include routers
+app.include_router(auth.router)
 app.include_router(grievances.router)
 app.include_router(dashboard.router)
 app.include_router(officer.router)
 app.include_router(voice.router)
+
 
 @app.get("/")
 def read_root(request: Request):

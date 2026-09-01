@@ -684,3 +684,76 @@ textarea.form-control {
     justify-content: space-between;
     align-items: center;
 }
+
+/* Authentication & Portal Switcher Styling */
+.user-nav-badge {
+    padding: 0.4rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.auth-subtabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 0.3rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.auth-subtab-btn {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.9rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.auth-subtab-btn.active {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #ffffff;
+    box-shadow: 0 4px 14px var(--primary-glow);
+}
+
+.auth-error-box {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    padding: 0.8rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.88rem;
+    margin-bottom: 1rem;
+    display: none;
+}
+
+.btn-demo-login {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 0.75rem;
+    transition: var(--transition);
+}
+
+.btn-demo-login:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--border-highlight);
+}
+
