@@ -144,8 +144,39 @@ function updateUserUI() {
         if (userBadge) userBadge.style.display = 'none';
         if (authContainer) {
             authContainer.innerHTML = `
-                <a href="/login" class="btn-action" style="padding:0.6rem 1rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;">👤 Citizen Login</a>
-                <a href="/admin/login" class="btn-action" style="padding:0.6rem 1rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;background:rgba(6,182,212,0.12);border-color:rgba(6,182,212,0.35);color:#67e8f9;margin-left:0.4rem;">🛡️ Admin Login</a>
+                <a href="/login" style="
+                    padding:0.55rem 1rem;
+                    font-weight:700;
+                    font-size:0.85rem;
+                    text-decoration:none;
+                    display:inline-flex;
+                    align-items:center;
+                    gap:0.4rem;
+                    background:rgba(99,102,241,0.15);
+                    border:1px solid rgba(99,102,241,0.4);
+                    color:#a5b4fc;
+                    border-radius:9px;
+                    transition:all 0.2s;
+                " onmouseover="this.style.background='rgba(99,102,241,0.28)'" onmouseout="this.style.background='rgba(99,102,241,0.15)'">
+                    👤 Citizen Login
+                </a>
+                <a href="/admin/login" style="
+                    padding:0.55rem 1rem;
+                    font-weight:700;
+                    font-size:0.85rem;
+                    text-decoration:none;
+                    display:inline-flex;
+                    align-items:center;
+                    gap:0.4rem;
+                    background:rgba(6,182,212,0.12);
+                    border:1px solid rgba(6,182,212,0.4);
+                    color:#67e8f9;
+                    border-radius:9px;
+                    transition:all 0.2s;
+                    margin-left:0.4rem;
+                " onmouseover="this.style.background='rgba(6,182,212,0.22)'" onmouseout="this.style.background='rgba(6,182,212,0.12)'">
+                    🛡️ Admin Login
+                </a>
             `;
         }
     }

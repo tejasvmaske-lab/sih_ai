@@ -3,31 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Citizen Login | SIH26-S02 Grievance Portal</title>
+    <title>Citizen Login | SIH26-S02 Smart Grievance Portal</title>
+    <meta name="description" content="Citizen login and registration for the SIH26-S02 AI Citizen Grievance Portal.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #6366f1;
-            --primary-dark: #4f46e5;
+            --primary-glow: rgba(99,102,241,0.35);
             --accent: #06b6d4;
-            --bg: #0b0f19;
-            --card: rgba(18, 26, 43, 0.95);
-            --border: rgba(255,255,255,0.08);
-            --text: #f8fafc;
-            --muted: #94a3b8;
+            --success: #10b981;
+            --bg: #080c18;
+            --surface: rgba(15,22,41,0.97);
+            --border: rgba(255,255,255,0.07);
+            --text: #f1f5f9;
+            --muted: #64748b;
             --font: 'Plus Jakarta Sans', sans-serif;
             --heading: 'Outfit', sans-serif;
-            --radius: 16px;
-            --error-bg: rgba(239,68,68,0.12);
-            --error-border: rgba(239,68,68,0.4);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
         body {
             background: var(--bg);
             background-image:
-                radial-gradient(at 15% 15%, rgba(99,102,241,0.18) 0, transparent 50%),
-                radial-gradient(at 85% 85%, rgba(6,182,212,0.12) 0, transparent 50%);
+                radial-gradient(ellipse at 0% 0%, rgba(99,102,241,0.22) 0, transparent 55%),
+                radial-gradient(ellipse at 100% 100%, rgba(6,182,212,0.12) 0, transparent 50%);
             background-attachment: fixed;
             font-family: var(--font);
             color: var(--text);
@@ -36,146 +36,220 @@
             align-items: center;
             justify-content: center;
             padding: 1.5rem;
+            overflow-x: hidden;
         }
-        .split-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            max-width: 1000px;
+
+        /* ── Floating Orbs ── */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.18;
+            pointer-events: none;
+            animation: floatOrb 12s ease-in-out infinite alternate;
+        }
+        .orb-1 { width: 420px; height: 420px; background: #6366f1; top: -120px; left: -100px; }
+        .orb-2 { width: 320px; height: 320px; background: #06b6d4; bottom: -80px; right: -80px; animation-delay: 3s; }
+        @keyframes floatOrb { from { transform: translate(0,0) scale(1); } to { transform: translate(30px,20px) scale(1.08); } }
+
+        /* ── Layout ── */
+        .page-wrap {
+            position: relative;
+            z-index: 1;
             width: 100%;
-            min-height: 580px;
-            border-radius: 24px;
+            max-width: 1020px;
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            min-height: 620px;
+            border-radius: 28px;
             overflow: hidden;
-            box-shadow: 0 24px 80px rgba(0,0,0,0.6);
-            border: 1px solid var(--border);
+            box-shadow: 0 32px 100px rgba(0,0,0,0.65), 0 0 0 1px var(--border);
         }
-        /* Left Panel - Branding */
-        .brand-panel {
-            background: linear-gradient(145deg, #1e1b4b 0%, #0f172a 100%);
-            padding: 3rem 2.5rem;
+
+        /* ── Left hero panel ── */
+        .hero {
+            background: linear-gradient(155deg, #12155a 0%, #0b0f19 60%, #061225 100%);
+            padding: 3.5rem 3rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
             position: relative;
             overflow: hidden;
+            border-right: 1px solid rgba(99,102,241,0.14);
         }
-        .brand-panel::before {
-            content: '';
-            position: absolute;
-            width: 350px; height: 350px;
-            border-radius: 50%;
-            background: rgba(99,102,241,0.12);
-            top: -80px; left: -80px;
+        .hero::before {
+            content:'';
+            position:absolute;
+            inset:0;
+            background: radial-gradient(ellipse at 30% 40%, rgba(99,102,241,0.18) 0, transparent 70%);
         }
-        .brand-panel::after {
-            content: '';
-            position: absolute;
-            width: 250px; height: 250px;
-            border-radius: 50%;
-            background: rgba(6,182,212,0.08);
-            bottom: -60px; right: -60px;
+        .hero-content { position: relative; z-index: 1; }
+        .hero-icon { font-size: 3.8rem; margin-bottom: 1.4rem; display: block; }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(99,102,241,0.18);
+            border: 1px solid rgba(99,102,241,0.4);
+            color: #a5b4fc;
+            padding: 0.3rem 0.9rem;
+            border-radius: 100px;
+            font-size: 0.73rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 1.1rem;
         }
-        .brand-logo-big {
-            font-size: 3.5rem;
-            margin-bottom: 1.2rem;
-        }
-        .brand-headline {
+        .hero h1 {
             font-family: var(--heading);
-            font-size: 1.9rem;
+            font-size: 2.1rem;
             font-weight: 800;
-            line-height: 1.2;
-            background: linear-gradient(135deg, #fff, #a5b4fc);
+            line-height: 1.18;
+            background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 1rem;
         }
-        .brand-sub {
-            color: var(--muted);
+        .hero-desc {
+            color: #64748b;
             font-size: 0.9rem;
-            line-height: 1.6;
+            line-height: 1.7;
             margin-bottom: 2rem;
         }
-        .feature-list { list-style: none; }
-        .feature-list li {
+        .feature-items { list-style: none; display: flex; flex-direction: column; gap: 0.65rem; }
+        .feature-items li {
             display: flex;
             align-items: center;
-            gap: 0.7rem;
-            font-size: 0.88rem;
-            color: #cbd5e1;
-            padding: 0.45rem 0;
+            gap: 0.75rem;
+            font-size: 0.86rem;
+            color: #94a3b8;
         }
-        .feature-list li span.icon {
-            width: 28px; height: 28px;
-            border-radius: 8px;
-            background: rgba(99,102,241,0.2);
+        .fi-icon {
+            width: 32px; height: 32px; flex-shrink: 0;
+            border-radius: 9px;
+            background: rgba(99,102,241,0.18);
+            border: 1px solid rgba(99,102,241,0.25);
             display: flex; align-items: center; justify-content: center;
             font-size: 0.9rem;
         }
-        /* Right Panel - Login Form */
+
+        /* ── Hero stats strip ── */
+        .hero-stats {
+            margin-top: 2.2rem;
+            display: flex;
+            gap: 1.5rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .stat { text-align: left; }
+        .stat-num { font-family: var(--heading); font-size: 1.5rem; font-weight: 800; color: #fff; }
+        .stat-lbl { font-size: 0.73rem; color: var(--muted); margin-top: 0.1rem; }
+
+        /* ── Right form panel ── */
         .form-panel {
-            background: var(--card);
-            padding: 3rem 2.5rem;
+            background: var(--surface);
+            padding: 3.2rem 2.8rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
-        .portal-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            background: rgba(99,102,241,0.15);
-            border: 1px solid rgba(99,102,241,0.35);
-            color: #a5b4fc;
-            padding: 0.3rem 0.85rem;
-            border-radius: 20px;
-            font-size: 0.76rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            margin-bottom: 1.25rem;
-            width: fit-content;
-        }
-        h2 {
-            font-family: var(--heading);
-            font-size: 1.7rem;
-            font-weight: 800;
-            margin-bottom: 0.35rem;
-        }
-        .form-subtitle {
-            color: var(--muted);
-            font-size: 0.88rem;
+
+        /* Tab toggles */
+        .tab-row {
+            display: flex;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 4px;
+            gap: 4px;
             margin-bottom: 2rem;
         }
-        .form-group { margin-bottom: 1.1rem; }
-        label {
-            display: block;
-            font-size: 0.82rem;
+        .tab-btn {
+            flex: 1;
+            padding: 0.6rem;
+            border: none;
+            border-radius: 9px;
+            font-family: var(--font);
+            font-size: 0.84rem;
             font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s;
+            background: transparent;
             color: var(--muted);
-            margin-bottom: 0.4rem;
         }
-        input[type="email"], input[type="password"], input[type="text"] {
+        .tab-btn.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 2px 14px rgba(99,102,241,0.4);
+        }
+
+        /* Sections */
+        .auth-section { display: none; }
+        .auth-section.visible { display: block; animation: fadeIn 0.25s ease; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+        .section-tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.9px;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        .section-title {
+            font-family: var(--heading);
+            font-size: 1.65rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 0.3rem;
+        }
+        .section-sub { color: var(--muted); font-size: 0.86rem; margin-bottom: 1.6rem; line-height: 1.5; }
+
+        /* Form fields */
+        .field { margin-bottom: 1.05rem; }
+        .field label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 0.38rem;
+        }
+        .field-wrap { position: relative; }
+        .field-icon {
+            position: absolute;
+            left: 0.95rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1rem;
+            pointer-events: none;
+        }
+        .field input {
             width: 100%;
-            padding: 0.8rem 1rem;
-            background: rgba(15,23,42,0.7);
+            padding: 0.78rem 1rem 0.78rem 2.6rem;
+            background: rgba(8,12,24,0.7);
             border: 1px solid var(--border);
             border-radius: 10px;
             color: var(--text);
             font-family: var(--font);
-            font-size: 0.95rem;
-            transition: all 0.2s;
+            font-size: 0.93rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
-        input:focus {
+        .field input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
         }
-        .btn {
+        .field input::placeholder { color: #374151; }
+
+        /* Buttons */
+        .btn-primary {
             width: 100%;
             padding: 0.9rem;
             border: none;
-            border-radius: 10px;
+            border-radius: 11px;
             font-family: var(--font);
-            font-size: 0.97rem;
+            font-size: 0.95rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.25s;
@@ -183,222 +257,264 @@
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
-        }
-        .btn-citizen {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
             color: #fff;
-            box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+            box-shadow: 0 4px 18px rgba(99,102,241,0.4);
             margin-bottom: 0.8rem;
         }
-        .btn-citizen:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99,102,241,0.5); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.55); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
         .btn-demo {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border);
-            color: var(--text);
-        }
-        .btn-demo:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
-        .error-box {
-            background: var(--error-bg);
-            border: 1px solid var(--error-border);
-            color: #fca5a5;
-            padding: 0.8rem 1rem;
+            width: 100%;
+            padding: 0.78rem;
+            background: rgba(99,102,241,0.08);
+            border: 1px solid rgba(99,102,241,0.25);
             border-radius: 10px;
-            font-size: 0.86rem;
-            margin-bottom: 1rem;
-            display: none;
+            font-family: var(--font);
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #a5b4fc;
+            cursor: pointer;
+            transition: all 0.2s;
         }
+        .btn-demo:hover { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); }
+
+        /* Error / success */
+        .alert-box {
+            display: none;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+        .alert-error {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.35);
+            color: #fca5a5;
+        }
+        .alert-success {
+            background: rgba(16,185,129,0.1);
+            border: 1px solid rgba(16,185,129,0.35);
+            color: #6ee7b7;
+        }
+
+        /* Divider */
         .divider {
             display: flex;
             align-items: center;
             gap: 0.8rem;
-            margin: 1rem 0;
-            color: var(--muted);
-            font-size: 0.8rem;
+            margin: 0.9rem 0;
+            color: #374151;
+            font-size: 0.78rem;
+            font-weight: 600;
         }
         .divider::before, .divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
+            content: ''; flex: 1; height: 1px; background: var(--border);
         }
-        .footer-link {
-            text-align: center;
+
+        /* Footer links */
+        .form-footer {
             margin-top: 1.2rem;
-            font-size: 0.84rem;
+            text-align: center;
+            font-size: 0.82rem;
             color: var(--muted);
         }
-        .footer-link a {
-            color: var(--accent);
-            text-decoration: none;
-            font-weight: 700;
-        }
-        .admin-link-box {
+        .form-footer a { color: var(--accent); font-weight: 700; text-decoration: none; }
+        .form-footer a:hover { text-decoration: underline; }
+
+        /* Admin link callout */
+        .admin-callout {
             margin-top: 1.5rem;
-            padding: 0.85rem 1rem;
-            background: rgba(245,158,11,0.08);
-            border: 1px solid rgba(245,158,11,0.25);
-            border-radius: 10px;
-            font-size: 0.82rem;
-            color: #fef08a;
+            padding: 0.9rem 1.1rem;
+            background: rgba(245,158,11,0.07);
+            border: 1px solid rgba(245,158,11,0.22);
+            border-radius: 12px;
+            font-size: 0.81rem;
+            color: #fde68a;
             text-align: center;
+            line-height: 1.55;
         }
-        .admin-link-box a {
+        .admin-callout a {
             color: #fbbf24;
-            text-decoration: none;
             font-weight: 700;
+            text-decoration: none;
         }
-        /* Register tab */
-        #registerSection { display: none; }
-        @media (max-width: 700px) {
-            .split-container { grid-template-columns: 1fr; }
-            .brand-panel { display: none; }
+        .admin-callout a:hover { text-decoration: underline; }
+
+        @media (max-width: 720px) {
+            .page-wrap { grid-template-columns: 1fr; }
+            .hero { display: none; }
+            .form-panel { padding: 2.2rem 1.6rem; }
         }
     </style>
 </head>
 <body>
 
-<div class="split-container">
-    <!-- Left Branding Panel -->
-    <div class="brand-panel">
-        <div class="brand-logo-big">🏛️</div>
-        <div class="brand-headline">Smart India<br>Grievance Portal</div>
-        <p class="brand-sub">
-            AI-powered civic grievance platform for classifying, prioritizing, and resolving citizen complaints with multilingual support.
-        </p>
-        <ul class="feature-list">
-            <li><span class="icon">🤖</span> AI Classification & Priority Detection</li>
-            <li><span class="icon">🔍</span> Duplicate Complaint Detection</li>
-            <li><span class="icon">🌐</span> English, Hindi & Marathi Support</li>
-            <li><span class="icon">📊</span> Real-time Municipal Dashboard</li>
-            <li><span class="icon">🛡️</span> Smart Department Routing</li>
-        </ul>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="page-wrap">
+    <!-- ─── Left Hero ─── -->
+    <div class="hero">
+        <div class="hero-content">
+            <span class="hero-icon">🏛️</span>
+            <div class="hero-badge">🇮🇳 Smart India Hackathon 2026 — S02</div>
+            <h1>Smart Civic Grievance Portal</h1>
+            <p class="hero-desc">
+                AI-powered platform for submitting, tracking, and resolving civic complaints
+                with multilingual support and real-time status updates.
+            </p>
+            <ul class="feature-items">
+                <li><div class="fi-icon">🤖</div> AI Classification &amp; Priority Detection</li>
+                <li><div class="fi-icon">🔍</div> Smart Duplicate Detection</li>
+                <li><div class="fi-icon">🎙️</div> Voice Complaint Recording</li>
+                <li><div class="fi-icon">🌐</div> English, Hindi &amp; Marathi Support</li>
+                <li><div class="fi-icon">📍</div> Location-based Complaint Tagging</li>
+            </ul>
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-num">19+</div>
+                    <div class="stat-lbl">Complaints Tracked</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">5</div>
+                    <div class="stat-lbl">Departments Routed</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num">AI</div>
+                    <div class="stat-lbl">Powered Engine</div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Right Form Panel -->
+    <!-- ─── Right Form ─── -->
     <div class="form-panel">
-        <!-- Login Section -->
-        <div id="loginSection">
-            <div class="portal-tag">👤 Citizen Portal</div>
-            <h2>Welcome Back</h2>
-            <p class="form-subtitle">Log in to submit and track your civic grievances.</p>
 
-            <div id="loginError" class="error-box"></div>
+        <!-- Tab Toggle -->
+        <div class="tab-row">
+            <button class="tab-btn active" id="tabLogin" onclick="showTab('login')">🔑 Login</button>
+            <button class="tab-btn" id="tabRegister" onclick="showTab('register')">✍️ Register</button>
+        </div>
 
-            <form id="loginForm">
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="loginEmail" placeholder="citizen@city.gov.in" required>
+        <!-- ── Login Section ── -->
+        <div class="auth-section visible" id="loginSection">
+            <div class="section-tag">👤 Citizen Portal</div>
+            <div class="section-title">Welcome Back</div>
+            <p class="section-sub">Log in to submit and track your civic grievances.</p>
+
+            <div id="loginError" class="alert-box alert-error"></div>
+
+            <form id="loginForm" onsubmit="doLogin(event)">
+                <div class="field">
+                    <label for="loginEmail">Email Address</label>
+                    <div class="field-wrap">
+                        <span class="field-icon">✉️</span>
+                        <input type="email" id="loginEmail" placeholder="citizen@city.gov.in" required autocomplete="email">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                <div class="field">
+                    <label for="loginPassword">Password</label>
+                    <div class="field-wrap">
+                        <span class="field-icon">🔒</span>
+                        <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-citizen">
+                <button type="submit" class="btn-primary" id="loginBtn">
                     <span>👤</span> Log In as Citizen
                 </button>
             </form>
 
             <div class="divider">or use demo account</div>
+            <button class="btn-demo" onclick="demoLogin()">⚡ 1-Click Demo Citizen Login</button>
 
-            <button class="btn btn-demo" onclick="demoLogin()">
-                ⚡ 1-Click Demo Citizen Login
-            </button>
-
-            <div class="footer-link">
-                New here? <a href="#" onclick="showRegister()">Create Citizen Account</a>
+            <div class="form-footer">
+                No account? <a href="#" onclick="showTab('register')">Create Free Account →</a>
             </div>
 
-            <div class="admin-link-box">
+            <div class="admin-callout">
                 🏢 Are you a <strong>Municipal Corporation Official?</strong><br>
                 <a href="/admin/login">Go to Official Admin Portal →</a>
             </div>
         </div>
 
-        <!-- Register Section -->
-        <div id="registerSection">
-            <div class="portal-tag">✍️ New Citizen Registration</div>
-            <h2>Create Account</h2>
-            <p class="form-subtitle">Join the smart civic grievance network.</p>
+        <!-- ── Register Section ── -->
+        <div class="auth-section" id="registerSection">
+            <div class="section-tag">✍️ New Citizen Account</div>
+            <div class="section-title">Create Account</div>
+            <p class="section-sub">Join the smart civic grievance network and start filing complaints.</p>
 
-            <div id="regError" class="error-box"></div>
+            <div id="regError" class="alert-box alert-error"></div>
+            <div id="regSuccess" class="alert-box alert-success"></div>
 
-            <form id="registerForm">
-                <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" id="regName" placeholder="Tejas Maske" required>
+            <form id="registerForm" onsubmit="doRegister(event)">
+                <div class="field">
+                    <label for="regName">Full Name</label>
+                    <div class="field-wrap">
+                        <span class="field-icon">🙋</span>
+                        <input type="text" id="regName" placeholder="Tejas Maske" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="regEmail" placeholder="citizen@city.gov.in" required>
+                <div class="field">
+                    <label for="regEmail">Email Address</label>
+                    <div class="field-wrap">
+                        <span class="field-icon">✉️</span>
+                        <input type="email" id="regEmail" placeholder="citizen@city.gov.in" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="regUsername" placeholder="tejas_citizen" required>
+                <div class="field">
+                    <label for="regUsername">Username</label>
+                    <div class="field-wrap">
+                        <span class="field-icon">👤</span>
+                        <input type="text" id="regUsername" placeholder="tejas_citizen" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="regPassword" placeholder="••••••••" required>
+                <div class="field">
+                    <label for="regPassword">Password</label>
+                    <div class="field-wrap">
+                        <span class="field-icon">🔒</span>
+                        <input type="password" id="regPassword" placeholder="Min. 6 characters" required minlength="6">
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-citizen">
-                    <span>✅</span> Register Citizen Account
+                <button type="submit" class="btn-primary" id="regBtn">
+                    <span>✅</span> Create Citizen Account
                 </button>
             </form>
 
-            <div class="footer-link" style="margin-top:1rem;">
-                Already registered? <a href="#" onclick="showLogin()">Back to Login</a>
+            <div class="form-footer">
+                Already registered? <a href="#" onclick="showTab('login')">Back to Login →</a>
             </div>
         </div>
+
     </div>
 </div>
 
 <script>
-    function showRegister() {
-        document.getElementById('loginSection').style.display = 'none';
-        document.getElementById('registerSection').style.display = 'block';
-    }
-    function showLogin() {
-        document.getElementById('registerSection').style.display = 'none';
-        document.getElementById('loginSection').style.display = 'block';
-    }
-
-    async function demoLogin() {
-        document.getElementById('loginEmail').value = 'citizen@city.gov.in';
-        document.getElementById('loginPassword').value = 'citizen123';
-        await doLogin('citizen@city.gov.in', 'citizen123');
-    }
-
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        await doLogin(email, password);
-    });
-
-    document.getElementById('registerForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fullName = document.getElementById('regName').value;
-        const email = document.getElementById('regEmail').value;
-        const username = document.getElementById('regUsername').value;
-        const password = document.getElementById('regPassword').value;
-
-        try {
-            const res = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, username, password, full_name: fullName })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.detail || 'Registration failed.');
-            await doLogin(email, password);
-        } catch(err) {
-            showError('regError', err.message);
-        }
-    });
-
-    async function doLogin(email, password) {
+    function showTab(tab) {
+        const isLogin = tab === 'login';
+        document.getElementById('loginSection').classList.toggle('visible', isLogin);
+        document.getElementById('registerSection').classList.toggle('visible', !isLogin);
+        document.getElementById('tabLogin').classList.toggle('active', isLogin);
+        document.getElementById('tabRegister').classList.toggle('active', !isLogin);
         clearErrors();
+    }
+
+    async function doLogin(e) {
+        e.preventDefault();
+        clearErrors();
+        const email    = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const btn      = document.getElementById('loginBtn');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Logging in…';
+
         try {
-            const res = await fetch('/api/auth/login', {
+            const res  = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, portal_type: 'citizen' })
@@ -408,23 +524,74 @@
             localStorage.setItem('sih_user', JSON.stringify(data));
             window.location.href = '/';
         } catch (err) {
-            showError('loginError', err.message);
+            showErr('loginError', '⚠️ ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = '<span>👤</span> Log In as Citizen';
         }
     }
 
-    function showError(id, msg) {
+    async function demoLogin() {
+        document.getElementById('loginEmail').value    = 'citizen@city.gov.in';
+        document.getElementById('loginPassword').value = 'citizen123';
+        document.getElementById('loginForm').requestSubmit();
+    }
+
+    async function doRegister(e) {
+        e.preventDefault();
+        clearErrors();
+        const fullName = document.getElementById('regName').value.trim();
+        const email    = document.getElementById('regEmail').value.trim();
+        const username = document.getElementById('regUsername').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const btn      = document.getElementById('regBtn');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Creating account…';
+
+        try {
+            const res  = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, username, password, full_name: fullName })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Registration failed.');
+
+            document.getElementById('regSuccess').textContent = '✅ Account created! Logging you in…';
+            document.getElementById('regSuccess').style.display = 'block';
+
+            // Auto-login after 1 second
+            setTimeout(async () => {
+                const lr  = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, portal_type: 'citizen' })
+                });
+                const ld = await lr.json();
+                if (lr.ok) {
+                    localStorage.setItem('sih_user', JSON.stringify(ld));
+                    window.location.href = '/';
+                }
+            }, 1000);
+        } catch (err) {
+            showErr('regError', '⚠️ ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = '<span>✅</span> Create Citizen Account';
+        }
+    }
+
+    function showErr(id, msg) {
         const el = document.getElementById(id);
         el.textContent = msg;
         el.style.display = 'block';
     }
     function clearErrors() {
-        ['loginError','regError'].forEach(id => {
+        ['loginError','regError','regSuccess'].forEach(id => {
             const el = document.getElementById(id);
             el.textContent = '';
             el.style.display = 'none';
         });
     }
 </script>
-
 </body>
 </html>
