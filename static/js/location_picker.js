@@ -135,7 +135,20 @@ async function reverseGeocode(lat, lng) {
       { headers: { 'Accept-Language': 'en' } }
     );
     const data = await res.json();
-    const address = data.display_name || t('map_no_address');
+    let address = data.display_name || t('map_no_address');
+    
+    // Format into a cleaner string if address object is available
+    if (data.address) {
+      const parts = [];
+      if (data.address.amenity || data.address.building) parts.push(data.address.amenity || data.address.building);
+      if (data.address.road) parts.push(data.address.road);
+      if (data.address.suburb || data.address.neighbourhood) parts.push(data.address.suburb || data.address.neighbourhood);
+      if (data.address.city || data.address.town || data.address.county) parts.push(data.address.city || data.address.town || data.address.county);
+      if (parts.length > 0) {
+        address = parts.join(', ');
+      }
+    }
+    
     selectedLocation.address = address;
     if (addrEl) addrEl.textContent = address;
   } catch {
