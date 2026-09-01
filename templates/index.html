@@ -485,18 +485,18 @@
 
     <script>
         // GPS shortcut from the form (not map modal)
-        function useGpsForForm() {
+        function useGpsForForm(btn) {
             if (!navigator.geolocation) {
                 alert('Geolocation not supported in this browser.');
                 return;
             }
-            const btn = event.currentTarget;
             btn.disabled = true;
+            btn.innerHTML = '⏳ Locating…';
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
-                    // Reverse geocode
+                    // Reverse geocode via Nominatim
                     let address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
                     try {
                         const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
@@ -508,15 +508,21 @@
                         `<span style="color:#34d399;">📡</span>
                          <span style="font-size:0.85rem;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;" title="${address}">${address}</span>
                          <span style="font-size:0.75rem;color:#64748b;">(${lat.toFixed(4)}, ${lng.toFixed(4)})</span>`;
-                    // Sync with location_picker state
-                    selectedLocation = { lat, lng, address };
+                    // Sync with location_picker state if available
+                    try {
+                        if (typeof selectedLocation !== 'undefined') {
+                            selectedLocation = { lat, lng, address };
+                        }
+                    } catch {}
                     btn.disabled = false;
+                    btn.innerHTML = '📡 <span data-i18n="form_use_gps">Use My Location</span>';
                 },
                 () => {
-                    alert(t('map_gps_error'));
+                    alert(typeof t === 'function' ? t('map_gps_error') : 'Could not get your location.');
                     btn.disabled = false;
+                    btn.innerHTML = '📡 <span data-i18n="form_use_gps">Use My Location</span>';
                 },
-                { timeout: 8000 }
+                { timeout: 10000 }
             );
         }
 
